@@ -10,6 +10,8 @@ final class AppModel {
     @ObservationIgnored let store: WorkspaceStore
     @ObservationIgnored private var saveTask: Task<Void, Never>?
     @ObservationIgnored private var sessions: [UUID: TerminalSession] = [:]
+    /// Terminal text that was on screen when the user pressed "Clear saved text": never saved again.
+    @ObservationIgnored private var clearedBaseline: [UUID: String] = [:]
     @ObservationIgnored private let integrationDir: URL
     @ObservationIgnored private let eventsDir: URL
 
@@ -82,6 +84,7 @@ final class AppModel {
               let i = state.workspaces.firstIndex(where: { $0.id == id }) else { return }
         state.workspaces[i].tabs.forEach {
             sessions[$0.id]?.terminate(); sessions[$0.id] = nil
+            clearedBaseline[$0.id] = nil
             store.deleteHistory(tab: $0.id)
             store.deleteSnapshot(tab: $0.id)
         }
@@ -115,6 +118,7 @@ final class AppModel {
         guard let ws = active, ws.tabs.count > 1, ws.tabs.contains(where: { $0.id == id }) else { return }
         mutateActive { $0.closeTab(id) }
         sessions[id]?.terminate(); sessions[id] = nil
+        clearedBaseline[id] = nil
         store.deleteHistory(tab: id)
         store.deleteSnapshot(tab: id)
     }
@@ -219,7 +223,8 @@ final class AppModel {
 
     private func saveSnapshot(of id: UUID) {
         guard state.restoreTerminalText, let s = sessions[id] else { return }
-        try? store.saveSnapshot(TerminalText.prepare(s.snapshotText()), tab: id)
+        let text = TerminalText.prepare(s.snapshotText())
+        try? store.saveSnapshot(TerminalText.afterClear(text, baseline: clearedBaseline[id] ?? ""), tab: id)
     }
 
     /// Saves the text of every running terminal. Tabs that were not opened this launch keep their old snapshot.
@@ -228,5 +233,9 @@ final class AppModel {
         for id in sessions.keys { saveSnapshot(of: id) }
     }
 
-    func clearSavedTerminalText() { store.clearSnapshots() }
+    /// Deletes the saved text and makes sure what is on screen right now is not saved again.
+    func clearSavedTerminalText() {
+        store.clearSnapshots()
+        for (id, s) in sessions { clearedBaseline[id] = TerminalText.prepare(s.snapshotText()) }
+    }
 }

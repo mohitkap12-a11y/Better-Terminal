@@ -23,6 +23,19 @@ public enum TerminalText {
         return lines.joined(separator: "\n")
     }
 
+    /// What to save for a terminal after the user pressed "Clear": only text produced after the clear.
+    /// `baseline` is the prepared text the terminal held at that moment. If the buffer still starts with it,
+    /// that part is dropped; if it only equals it, nothing is saved. (If the buffer has scrolled past the baseline,
+    /// the text is kept as is.)
+    public static func afterClear(_ text: String, baseline: String) -> String {
+        guard !baseline.isEmpty else { return text }
+        if text == baseline { return "" }
+        if text.hasPrefix(baseline) {
+            return prepare(String(text.dropFirst(baseline.count)).trimmingCharacters(in: .newlines))
+        }
+        return text
+    }
+
     /// Bytes to feed a fresh terminal to show the saved text, followed by a dim divider line.
     /// Empty input gives "" (nothing is replayed).
     public static func replayPayload(_ saved: String) -> String {

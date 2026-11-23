@@ -242,3 +242,24 @@ final class SnapshotTests: XCTestCase {
         XCTAssertTrue(s.restoreTerminalText)
     }
 }
+
+final class ClearSnapshotTests: XCTestCase {
+    func testNothingSavedUntilNewOutput() {
+        let base = "$ ls\nfile\n$"
+        XCTAssertEqual(TerminalText.afterClear(base, baseline: base), "")
+    }
+
+    func testOnlyNewTextIsSaved() {
+        let base = "$ ls\nfile\n$"
+        let now = "$ ls\nfile\n$ pwd\n/tmp\n$"
+        XCTAssertEqual(TerminalText.afterClear(now, baseline: base), "pwd\n/tmp\n$")
+    }
+
+    func testNoBaselineKeepsEverything() {
+        XCTAssertEqual(TerminalText.afterClear("a\nb", baseline: ""), "a\nb")
+    }
+
+    func testScrolledPastBaselineKeepsText() {
+        XCTAssertEqual(TerminalText.afterClear("new stuff", baseline: "old stuff"), "new stuff")
+    }
+}
