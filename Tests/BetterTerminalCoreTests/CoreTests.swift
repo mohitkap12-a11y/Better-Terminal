@@ -327,8 +327,10 @@ final class ReorderTests: XCTestCase {
         XCTAssertTrue(s.renameTab(t[0], to: "  server  "))
         XCTAssertEqual(s.workspaces[0].tabs[0].title, "server")
         XCTAssertTrue(s.workspaces[0].tabs[0].hasCustomTitle)
+        s.workspaces[0].tabs[0].shellTitle = "vim notes.md"     // the shell kept reporting its title
         XCTAssertTrue(s.renameTab(t[0], to: "   "))          // empty: back to shell titles
         XCTAssertFalse(s.workspaces[0].tabs[0].hasCustomTitle)
+        XCTAssertEqual(s.workspaces[0].tabs[0].title, "vim notes.md")
         XCTAssertFalse(s.renameTab(UUID(), to: "x"))
     }
 
@@ -336,5 +338,6 @@ final class ReorderTests: XCTestCase {
         let json = #"{"id":"11111111-1111-1111-1111-111111111111","title":"T","cwd":"/","shell":"/bin/zsh"}"#
         let tab = try JSONDecoder().decode(TerminalTab.self, from: Data(json.utf8))
         XCTAssertFalse(tab.hasCustomTitle)
+        XCTAssertEqual(tab.shellTitle, "T")
     }
 }

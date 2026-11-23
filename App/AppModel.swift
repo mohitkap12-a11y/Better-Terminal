@@ -219,10 +219,12 @@ final class AppModel {
 
     private func setTitle(tab id: UUID, _ title: String) {
         for wi in state.workspaces.indices {
-            if let ti = state.workspaces[wi].tabs.firstIndex(where: { $0.id == id }),
-               !state.workspaces[wi].tabs[ti].hasCustomTitle,
-               state.workspaces[wi].tabs[ti].title != title, !title.isEmpty {
-                state.workspaces[wi].tabs[ti].title = title
+            if let ti = state.workspaces[wi].tabs.firstIndex(where: { $0.id == id }), !title.isEmpty {
+                // Always remember what the shell calls the tab; show it unless the user chose a name.
+                if state.workspaces[wi].tabs[ti].shellTitle != title { state.workspaces[wi].tabs[ti].shellTitle = title }
+                if !state.workspaces[wi].tabs[ti].hasCustomTitle, state.workspaces[wi].tabs[ti].title != title {
+                    state.workspaces[wi].tabs[ti].title = title
+                }
             }
         }
     }

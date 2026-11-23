@@ -23,12 +23,15 @@ public struct TerminalTab: Codable, Hashable, Sendable, Identifiable {
     public var title: String
     public var cwd: String
     public var shell: String
-    /// True once the user renamed the tab: the shell's own title updates no longer overwrite it.
+    /// True once the user renamed the tab: the shell's own title updates no longer overwrite `title`.
     public var hasCustomTitle: Bool
+    /// The latest title the shell set, kept while a custom name is shown so clearing the name can restore it.
+    public var shellTitle: String
 
     public init(id: UUID = UUID(), title: String = "Terminal",
                 cwd: String = NSHomeDirectory(), shell: String = "/bin/zsh", hasCustomTitle: Bool = false) {
         self.id = id; self.title = title; self.cwd = cwd; self.shell = shell; self.hasCustomTitle = hasCustomTitle
+        self.shellTitle = title
     }
 
     // Tolerant decoding: state files written before renaming existed have no `hasCustomTitle`.
@@ -39,6 +42,7 @@ public struct TerminalTab: Codable, Hashable, Sendable, Identifiable {
         cwd = try c.decode(String.self, forKey: .cwd)
         shell = try c.decode(String.self, forKey: .shell)
         hasCustomTitle = try c.decodeIfPresent(Bool.self, forKey: .hasCustomTitle) ?? false
+        shellTitle = try c.decodeIfPresent(String.self, forKey: .shellTitle) ?? title
     }
 }
 
@@ -165,6 +169,7 @@ extension AppState {
             if let t = workspaces[w].tabs.firstIndex(where: { $0.id == tabID }) {
                 if trimmed.isEmpty {
                     workspaces[w].tabs[t].hasCustomTitle = false
+                    workspaces[w].tabs[t].title = workspaces[w].tabs[t].shellTitle
                 } else {
                     workspaces[w].tabs[t].title = String(trimmed.prefix(60))
                     workspaces[w].tabs[t].hasCustomTitle = true
