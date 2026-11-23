@@ -1,0 +1,29 @@
+name: BetterTerminal
+options:
+  bundleIdPrefix: com.better
+  deploymentTarget:
+    macOS: "14.0"
+packages:
+  BetterTerminal:
+    path: .
+targets:
+  BetterTerminal:
+    type: application
+    platform: macOS
+    sources: [App]
+    dependencies:
+      - package: BetterTerminal
+        product: BetterTerminalCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.better.terminal
+        PRODUCT_NAME: Better Terminal
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Better Terminal
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        ENABLE_APP_SANDBOX: NO
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_STYLE: Automatic

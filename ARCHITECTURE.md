@@ -21,7 +21,7 @@ Layout is per workspace (`PaneLayout` rows x columns). New tabs/panes fill row-m
 
 ## Roadmap
 1. [x] Core models, persistence, tests, CI
-2. [ ] Xcode app shell: window, workspace rail, tab bar, themes, settings (DESIGN.md rules)
+2. [x] Xcode app shell (XcodeGen `project.yml`, `App/`): window, workspace rail, tab bar, layout picker, history drawer, themes, settings. Temporary Process-based pane until engine lands
 3. [ ] TerminalEngine + libghostty, PTY, shell integration scripts
 4. [ ] Layout picker + panes grid
 5. [ ] History drawer (per tab) + restore on launch

@@ -6,3 +6,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: swift test
+  app:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - run: xcodebuild -project BetterTerminal.xcodeproj -scheme BetterTerminal -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
