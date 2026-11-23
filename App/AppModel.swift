@@ -17,6 +17,9 @@ final class AppModel {
     var route: AppRoute = .terminal
     var paletteOpen = false
     var walkthroughOpen = false
+    /// The pane that was just navigated to, for the highlight pulse. `flashID` changes on every move.
+    var flashTab: UUID?
+    var flashID = 0
     var layoutPickerOpen = false
     var historyOpenTab: UUID?
     /// Bumped when a shell exits and is relaunched, so views rebuild.
@@ -141,6 +144,18 @@ final class AppModel {
                 state.workspaces[wi].tabs[ti].title = title
             }
         }
+    }
+
+    /// ⌘+arrow: focus the neighbouring pane in the workspace grid and pulse it.
+    func focusPane(_ direction: PaneDirection) {
+        guard let ws = active, let activeID = ws.activeTabID,
+              let current = ws.tabs.firstIndex(where: { $0.id == activeID }),
+              let next = ws.layout.neighbor(of: current, direction, paneCount: ws.tabs.count) else { return }
+        let target = ws.tabs[next]
+        mutateActive { $0.activeTabID = target.id }
+        session(for: target).focus()
+        flashTab = target.id
+        flashID += 1
     }
 
     func toggleHistory() { historyOpenTab = historyOpenTab == nil ? active?.activeTabID : nil }

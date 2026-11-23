@@ -167,3 +167,32 @@ final class EventTests: XCTestCase {
         XCTAssertEqual(s.env["BT_EVENT_FILE"], "/e/1.log")
     }
 }
+
+final class PaneNavigationTests: XCTestCase {
+    func testMovesInGrid() {
+        let l = PaneLayout(rows: 2, columns: 3)           // panes 0 1 2 / 3 4 5
+        XCTAssertEqual(l.neighbor(of: 0, .right, paneCount: 6), 1)
+        XCTAssertEqual(l.neighbor(of: 2, .right, paneCount: 6), nil)
+        XCTAssertEqual(l.neighbor(of: 4, .left, paneCount: 6), 3)
+        XCTAssertEqual(l.neighbor(of: 3, .left, paneCount: 6), nil)
+        XCTAssertEqual(l.neighbor(of: 1, .down, paneCount: 6), 4)
+        XCTAssertEqual(l.neighbor(of: 4, .up, paneCount: 6), 1)
+        XCTAssertEqual(l.neighbor(of: 1, .up, paneCount: 6), nil)
+        XCTAssertEqual(l.neighbor(of: 4, .down, paneCount: 6), nil)
+    }
+
+    func testShortLastRow() {
+        let l = PaneLayout(rows: 2, columns: 3)           // 0 1 2 / 3 4 and an empty cell
+        XCTAssertEqual(l.neighbor(of: 4, .right, paneCount: 5), nil)
+        XCTAssertEqual(l.neighbor(of: 2, .down, paneCount: 5), 4)   // lands on the row's last pane
+        XCTAssertEqual(l.neighbor(of: 1, .down, paneCount: 5), 4)
+    }
+
+    func testSinglePaneAndInvalid() {
+        let l = PaneLayout.single
+        XCTAssertNil(l.neighbor(of: 0, .down, paneCount: 1))
+        XCTAssertNil(l.neighbor(of: 3, .left, paneCount: 1))
+        // more tabs than the layout holds: extra rows are reachable
+        XCTAssertEqual(PaneLayout(rows: 1, columns: 2).neighbor(of: 0, .down, paneCount: 4), 2)
+    }
+}

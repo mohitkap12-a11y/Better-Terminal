@@ -15,7 +15,7 @@ struct Walkthrough: View {
         Page(title: "Workspaces",
              text: "Keep each project in its own workspace, with its own tabs and layout. Switch from the sidebar or with ⌃⌘1–9. Everything is restored when you reopen the app."),
         Page(title: "Pane layouts",
-             text: "Tabs fill a grid. Pick 1×2, 2×1, 2×2 or your own from the layout button (⌥⌘L). New tabs follow the layout."),
+             text: "Tabs fill a grid. Pick 1×2, 2×1, 2×2 or your own from the layout button (⌥⌘L). New tabs follow the layout. Move between panes with ⌘ and the arrow keys."),
         Page(title: "History for every tab",
              text: "Press ⇧⌘H or the clock button on a pane. Type to search, ↑↓ to move, ⏎ to put the command at the prompt, ⌘⏎ to run it."),
         Page(title: "Command palette",

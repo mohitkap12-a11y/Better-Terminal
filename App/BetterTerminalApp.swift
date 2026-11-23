@@ -46,6 +46,13 @@ struct BetterTerminalApp: App {
                 Button("Smaller Text") { model.state.terminalFontSize = max(9, model.state.terminalFontSize - 1) }
                     .keyboardShortcut("-")
             }
+            CommandMenu("Pane") {
+                let blocked = model.paletteOpen || model.historyOpenTab != nil || model.route != .terminal
+                Button("Focus Pane Left") { model.focusPane(.left) }.keyboardShortcut(.leftArrow, modifiers: .command).disabled(blocked)
+                Button("Focus Pane Right") { model.focusPane(.right) }.keyboardShortcut(.rightArrow, modifiers: .command).disabled(blocked)
+                Button("Focus Pane Up") { model.focusPane(.up) }.keyboardShortcut(.upArrow, modifiers: .command).disabled(blocked)
+                Button("Focus Pane Down") { model.focusPane(.down) }.keyboardShortcut(.downArrow, modifiers: .command).disabled(blocked)
+            }
             CommandMenu("Workspace") {
                 ForEach(0..<9, id: \.self) { i in
                     Button("Workspace \(i + 1)") { model.selectWorkspace(at: i) }

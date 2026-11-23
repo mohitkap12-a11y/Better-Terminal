@@ -149,7 +149,7 @@ private struct ShortcutsSection: View {
     @Environment(\.theme) private var theme
     private let items: [(String, String)] = [
         ("New tab", "⌘T"), ("Close tab", "⌘W"), ("New workspace", "⇧⌘N"), ("Switch workspace", "⌃⌘1–9"),
-        ("Command palette", "⌘K"), ("Pane layout", "⌥⌘L"), ("Command history", "⇧⌘H"), ("Settings", "⌘,")
+        ("Command palette", "⌘K"), ("Pane layout", "⌥⌘L"), ("Move between panes", "⌘← ↑ ↓ →"), ("Command history", "⇧⌘H"), ("Settings", "⌘,")
     ]
 
     var body: some View {

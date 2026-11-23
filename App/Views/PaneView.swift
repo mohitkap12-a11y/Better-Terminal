@@ -8,6 +8,7 @@ struct PaneView: View {
     @Environment(\.colorScheme) private var scheme
     let tab: TerminalTab
     let focused: Bool
+    @State private var pulse: Double = 0
 
     var body: some View {
         let session = model.session(for: tab)
@@ -19,6 +20,20 @@ struct PaneView: View {
         .background(theme.terminalBackground(scheme))
         .overlay(alignment: .top) {
             if focused { Rectangle().fill(theme.accent).frame(height: 2) }
+        }
+        .overlay {
+            // Subtle highlight when you arrive here with ⌘+arrow: a soft wash and an accent edge that fade out.
+            ZStack {
+                Rectangle().fill(theme.accent.opacity(0.08))
+                Rectangle().strokeBorder(theme.accent.opacity(0.85), lineWidth: 2.5)
+            }
+            .opacity(pulse)
+            .allowsHitTesting(false)
+        }
+        .onChange(of: model.flashID) {
+            guard model.flashTab == tab.id else { return }
+            pulse = 1
+            withAnimation(.easeOut(duration: 0.75)) { pulse = 0 }
         }
         .onAppear { if focused { session.focus() } }
         .onChange(of: focused) { if focused { session.focus() } }
