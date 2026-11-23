@@ -19,6 +19,9 @@ final class AppModel {
     var route: AppRoute = .terminal
     var paletteOpen = false
     var walkthroughOpen = false
+    /// Tab being renamed (the alert lives in RootView) and the text typed so far.
+    var renamingTab: UUID?
+    var renameText = ""
     /// The pane that was just navigated to, for the highlight pulse. `flashID` changes on every move.
     var flashTab: UUID?
     var flashID = 0
@@ -123,6 +126,61 @@ final class AppModel {
         store.deleteSnapshot(tab: id)
     }
 
+    // MARK: Reorder / move / rename
+
+    /// Drag payloads: "tab:<uuid>" and "ws:<uuid>".
+    static func tabPayload(_ id: UUID) -> String { "tab:\(id.uuidString)" }
+    static func workspacePayload(_ id: UUID) -> String { "ws:\(id.uuidString)" }
+
+    private func payloadID(_ items: [String], prefix: String) -> UUID? {
+        items.lazy.compactMap { $0.hasPrefix(prefix) ? UUID(uuidString: String($0.dropFirst(prefix.count))) : nil }.first
+    }
+
+    /// A drag was dropped on a tab: put the dragged tab in front of it (same or another workspace).
+    func handleDrop(_ items: [String], ontoTab target: UUID) -> Bool {
+        guard let tab = payloadID(items, prefix: "tab:"),
+              let ws = state.workspaces.first(where: { $0.tabs.contains { $0.id == target } }) else { return false }
+        return state.moveTab(tab, toWorkspace: ws.id, before: target)
+    }
+
+    /// A drag was dropped on a workspace row: a tab joins that workspace, a workspace moves in front of it.
+    func handleDrop(_ items: [String], ontoWorkspace target: UUID) -> Bool {
+        if let tab = payloadID(items, prefix: "tab:") { return state.moveTab(tab, toWorkspace: target) }
+        if let ws = payloadID(items, prefix: "ws:") { return state.moveWorkspace(ws, before: target) }
+        return false
+    }
+
+    /// A workspace was dropped after the last row.
+    func handleDropAtEnd(_ items: [String]) -> Bool {
+        guard let ws = payloadID(items, prefix: "ws:") else { return false }
+        return state.moveWorkspace(ws, before: nil)
+    }
+
+    /// Dropped on the "New Workspace" row: a tab gets a workspace of its own, a workspace moves to the end.
+    func handleDropOnNewWorkspace(_ items: [String]) -> Bool {
+        if let tab = payloadID(items, prefix: "tab:") { moveTabToNewWorkspace(tab); return true }
+        return handleDropAtEnd(items)
+    }
+
+    func moveTab(_ id: UUID, toWorkspace workspaceID: UUID) { state.moveTab(id, toWorkspace: workspaceID) }
+
+    /// Moves a tab into a brand-new workspace.
+    func moveTabToNewWorkspace(_ id: UUID) {
+        guard let current = state.workspaces.first(where: { $0.tabs.contains { $0.id == id } }) else { return }
+        let palette = ["#0A84FF", "#30B26B", "#FF7A45", "#8E6CF0", "#FF375F", "#64D2FF"]
+        let ws = Workspace(name: "Workspace \(state.workspaces.count + 1)",
+                           colorHex: palette[state.workspaces.count % palette.count], layout: current.layout)
+        state.workspaces.append(ws)
+        state.moveTab(id, toWorkspace: ws.id)
+    }
+
+    func beginRenameTab(_ tab: TerminalTab) { renameText = tab.title; renamingTab = tab.id }
+
+    func commitRenameTab() {
+        if let id = renamingTab { state.renameTab(id, to: renameText) }
+        renamingTab = nil
+    }
+
     func setLayout(_ layout: PaneLayout) { mutateActive { $0.layout = layout } }
 
     // MARK: Terminal sessions
@@ -162,6 +220,7 @@ final class AppModel {
     private func setTitle(tab id: UUID, _ title: String) {
         for wi in state.workspaces.indices {
             if let ti = state.workspaces[wi].tabs.firstIndex(where: { $0.id == id }),
+               !state.workspaces[wi].tabs[ti].hasCustomTitle,
                state.workspaces[wi].tabs[ti].title != title, !title.isEmpty {
                 state.workspaces[wi].tabs[ti].title = title
             }
