@@ -16,7 +16,7 @@ struct PaneView: View {
             Divider()
             TerminalHost(session: session, theme: theme, scheme: scheme, fontSize: model.state.terminalFontSize)
         }
-        .background(theme.background(scheme))
+        .background(theme.terminalBackground(scheme))
         .overlay(alignment: .top) {
             if focused { Rectangle().fill(theme.accent).frame(height: 2) }
         }

@@ -2,6 +2,8 @@ import SwiftUI
 import Observation
 import BetterTerminalCore
 
+enum AppRoute: Hashable { case terminal, settings }
+
 @MainActor @Observable
 final class AppModel {
     var state: AppState { didSet { scheduleSave() } }
@@ -12,6 +14,7 @@ final class AppModel {
     @ObservationIgnored private let eventsDir: URL
 
     // UI triggers (keyboard shortcuts)
+    var route: AppRoute = .terminal
     var paletteOpen = false
     var layoutPickerOpen = false
     var historyOpenTab: UUID?
@@ -80,6 +83,7 @@ final class AppModel {
     func selectWorkspace(at index: Int) {
         guard state.workspaces.indices.contains(index) else { return }
         state.activeWorkspaceID = state.workspaces[index].id
+        route = .terminal
     }
 
     func moveWorkspaces(from: IndexSet, to: Int) { state.workspaces.move(fromOffsets: from, toOffset: to) }

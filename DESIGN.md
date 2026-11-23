@@ -31,7 +31,7 @@ Adapted from ibelick/ui-skills (web-focused) + Apple HIG, translated to SwiftUI/
 
 ## Key components
 - **Layout picker**: popover grid of mini diagrams (1x1, 1x2, 2x1, 1x3, 3x1, 2x2, 2x3, 3x2, 3x3) + custom rows/cols steppers. Hover previews, click applies, current is highlighted. Opens from toolbar button.
-- **Workspace rail**: left vertical rail, colored SF-Symbol icons, drag to reorder, context menu (rename/color/delete), "+" to add.
+- **Sidebar** (MacPeek Remote style): 236pt full width or an 80pt icon rail (chevron on its edge), clears the traffic lights, workspace rows with colored badges, context menu (rename/color/delete), Search and Settings at the bottom.
 - **Tab bar**: top, compact, close-on-hover, drag reorder, running indicator.
 - **History drawer (per tab)**: popover/side drawer, newest first, search field, failed-command filter, relative timestamps, exit-code dot; click = insert at prompt, double-click or Cmd-click = run.
-- **Settings**: sidebar-style Settings window (General, Appearance, Terminal, Shell, Keyboard, Privacy).
+- **Settings**: a page inside the main window; sections (Appearance, Terminal, Updates, Data, Shortcuts, About) in one card, title/hint on the left, controls on the right.

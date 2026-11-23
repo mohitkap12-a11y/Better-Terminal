@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
+    <key>CFBundleDisplayName</key><string>Better Terminal</string>
+    <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+    <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
+    <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
+    <key>LSMinimumSystemVersion</key><string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+    <key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>
+    <key>NSPrincipalClass</key><string>NSApplication</string>
+    <key>NSHumanReadableCopyright</key><string>Open source.</string>
+    <!-- Sparkle in-app updates. The public key is passed to the build by scripts/build-app.sh
+         (SPARKLE_PUBLIC_ED_KEY); without a real key the app runs with updates switched off. -->
+    <key>SUFeedURL</key><string>https://github.com/mohitkap12-a11y/Better-Terminal/releases/latest/download/appcast.xml</string>
+    <!-- Preview (beta) feed: read instead of SUFeedURL only by Macs opted in with `receivePreviewBuilds`
+         (docs/release.md, "Preview builds"). A fixed pre-release, so it is never "latest". -->
+    <key>BetterTerminalPreviewFeedURL</key><string>https://github.com/mohitkap12-a11y/Better-Terminal/releases/download/preview-feed/appcast-beta.xml</string>
+    <key>SUPublicEDKey</key><string>$(SPARKLE_PUBLIC_ED_KEY)</string>
+    <key>SUEnableAutomaticChecks</key><true/>
+    <key>SUScheduledCheckInterval</key><integer>86400</integer>
+</dict>
+</plist>

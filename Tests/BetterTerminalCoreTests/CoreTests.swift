@@ -79,7 +79,7 @@ final class IntegrationTests: XCTestCase {
         let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
         let full = try enc.encode(AppState(workspaces: [ws]))
         var obj = try JSONSerialization.jsonObject(with: full) as! [String: Any]
-        ["terminalFontSize", "aiProvider", "aiModel", "version"].forEach { obj.removeValue(forKey: $0) }
+        ["terminalFontSize", "version"].forEach { obj.removeValue(forKey: $0) }
         let data = try JSONSerialization.data(withJSONObject: obj)
         let s = try JSONDecoder().decode(AppState.self, from: data)
         XCTAssertEqual(s.terminalFontSize, 13)

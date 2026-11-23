@@ -32,6 +32,7 @@ struct PaneGrid: View {
 
 private struct EmptyPane: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.theme) private var theme
     var body: some View {
         VStack(spacing: Metrics.s2) {
             Image(systemName: "plus.rectangle.on.rectangle").font(.title2).foregroundStyle(.tertiary)
@@ -39,6 +40,6 @@ private struct EmptyPane: View {
             Button("New Tab") { model.newTab() }.controlSize(.small)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.background)
+        .background(theme.groundColor)
     }
 }

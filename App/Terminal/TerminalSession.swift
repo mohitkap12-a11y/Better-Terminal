@@ -69,6 +69,7 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
 
     private let view = LocalProcessTerminalView(frame: .zero)
     private var clickMonitor: Any?
+    private var rightClickMonitor: Any?
     private var tailer: EventFileTailer?
     private var tracker: CommandTracker
     private let callbacks: Callbacks
@@ -89,6 +90,15 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
                 Task { @MainActor in callbacks.onFocus() }
             }
             return event
+        }
+
+        // Right-click on selected text copies it (instead of opening a menu).
+        rightClickMonitor = NSEvent.addLocalMonitorForEvents(matching: .rightMouseDown) { [weak self] event in
+            guard let self, let w = self.view.window, event.window === w,
+                  self.view.bounds.contains(self.view.convert(event.locationInWindow, from: nil)),
+                  self.view.selectionActive else { return event }
+            self.view.copy(self)
+            return nil
         }
 
         tailer = EventFileTailer(url: eventFile) { [weak self] line in self?.handle(line) }
@@ -133,19 +143,23 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
     }
 
     func apply(theme: Theme, scheme: ColorScheme, fontSize: Double) {
-        view.nativeBackgroundColor = NSColor(theme.background(scheme))
-        view.nativeForegroundColor = NSColor(theme.foreground(scheme))
+        view.nativeBackgroundColor = NSColor(theme.terminalBackground(scheme))
+        view.nativeForegroundColor = NSColor(theme.terminalForeground(scheme))
         let f = NSFont.monospacedSystemFont(ofSize: CGFloat(fontSize), weight: .regular)
         if view.font.pointSize != f.pointSize { view.font = f }
     }
 
     func terminate() {
         if let m = clickMonitor { NSEvent.removeMonitor(m); clickMonitor = nil }
+        if let m = rightClickMonitor { NSEvent.removeMonitor(m); rightClickMonitor = nil }
         tailer?.stop(); tailer = nil
         view.terminate()
     }
 
-    deinit { if let m = clickMonitor { NSEvent.removeMonitor(m) } }
+    deinit {
+        if let m = clickMonitor { NSEvent.removeMonitor(m) }
+        if let m = rightClickMonitor { NSEvent.removeMonitor(m) }
+    }
 
     // MARK: LocalProcessTerminalViewDelegate
     func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {}

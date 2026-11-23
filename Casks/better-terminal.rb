@@ -7,6 +7,7 @@ cask "better-terminal" do
   desc "Modern native terminal with workspaces, pane layouts and per-tab history"
   homepage "https://github.com/mohitkap12-a11y/Better-Terminal"
 
+  auto_updates true
   depends_on macos: ">= :sonoma"
 
   app "Better Terminal.app"

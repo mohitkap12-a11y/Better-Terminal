@@ -71,8 +71,6 @@ public struct AppState: Codable, Sendable {
     public var themeMode: ThemeMode = .system
     public var themeID: String = "default"
     public var terminalFontSize: Double = 13
-    public var aiProvider: String = "anthropic"   // "anthropic" | "ollama"
-    public var aiModel: String = ""               // empty = provider default
 
     public init(workspaces: [Workspace] = [], activeWorkspaceID: UUID? = nil) {
         self.workspaces = workspaces
@@ -88,8 +86,6 @@ public struct AppState: Codable, Sendable {
         themeMode = try c.decodeIfPresent(ThemeMode.self, forKey: .themeMode) ?? .system
         themeID = try c.decodeIfPresent(String.self, forKey: .themeID) ?? "default"
         terminalFontSize = try c.decodeIfPresent(Double.self, forKey: .terminalFontSize) ?? 13
-        aiProvider = try c.decodeIfPresent(String.self, forKey: .aiProvider) ?? "anthropic"
-        aiModel = try c.decodeIfPresent(String.self, forKey: .aiModel) ?? ""
     }
 
     public static func fresh() -> AppState {

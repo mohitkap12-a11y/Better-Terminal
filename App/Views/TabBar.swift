@@ -3,6 +3,7 @@ import BetterTerminalCore
 
 struct TabBar: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.theme) private var theme
     let workspace: Workspace
 
     var body: some View {
@@ -35,12 +36,13 @@ struct TabBar: View {
         .padding(.horizontal, Metrics.s3)
         .padding(.top, Metrics.s2)
         .frame(height: 40)
-        .background(.bar)
+        .background(theme.groundColor)
     }
 }
 
 private struct TabChip: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.theme) private var theme
     let tab: TerminalTab
     let selected: Bool
     let canClose: Bool
@@ -61,7 +63,7 @@ private struct TabChip: View {
         }
         .padding(.horizontal, Metrics.s2)
         .frame(height: 28)
-        .background(selected ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear),
+        .background(selected ? theme.selection : Color.clear,
                     in: RoundedRectangle(cornerRadius: Metrics.radiusControl))
         .contentShape(Rectangle())
         .onTapGesture { model.mutateActive { $0.activeTabID = tab.id } }

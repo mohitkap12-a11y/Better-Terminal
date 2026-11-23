@@ -45,6 +45,7 @@ struct LayoutPicker: View {
 }
 
 struct LayoutThumb: View {
+    @Environment(\.theme) private var theme
     let layout: PaneLayout
     let selected: Bool
 
@@ -54,7 +55,7 @@ struct LayoutThumb: View {
                 GridRow {
                     ForEach(0..<layout.columns, id: \.self) { _ in
                         RoundedRectangle(cornerRadius: 2)
-                            .fill(selected ? Color.accentColor : Color.secondary.opacity(0.45))
+                            .fill(selected ? theme.accent : Color.secondary.opacity(0.45))
                     }
                 }
             }
@@ -64,7 +65,7 @@ struct LayoutThumb: View {
         .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: Metrics.radiusControl))
         .overlay {
             RoundedRectangle(cornerRadius: Metrics.radiusControl)
-                .strokeBorder(selected ? Color.accentColor : .clear, lineWidth: 1.5)
+                .strokeBorder(selected ? theme.accent : .clear, lineWidth: 1.5)
         }
     }
 }

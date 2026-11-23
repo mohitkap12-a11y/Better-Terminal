@@ -4,23 +4,32 @@ import BetterTerminalCore
 @main
 struct BetterTerminalApp: App {
     @State private var model = AppModel()
+    @StateObject private var updater = UpdaterService()
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(model)
+                .environmentObject(updater)
                 .environment(\.theme, model.theme)
                 .preferredColorScheme(model.colorScheme)
                 .tint(model.theme.accent)
-                .frame(minWidth: 760, minHeight: 480)
+                .frame(minWidth: 860, minHeight: 520)
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
                     model.saveNow()
                 }
         }
         .windowStyle(.hiddenTitleBar)
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") { updater.checkForUpdates() }
+                    .disabled(!updater.isAvailable || !updater.canCheckForUpdates)
+            }
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") { model.route = .settings }.keyboardShortcut(",")
+            }
             CommandGroup(replacing: .newItem) {
-                Button("New Tab") { model.newTab() }.keyboardShortcut("t")
+                Button("New Tab") { model.route = .terminal; model.newTab() }.keyboardShortcut("t")
                 Button("New Workspace") { model.addWorkspace() }.keyboardShortcut("n", modifiers: [.command, .shift])
                 Button("Close Tab") {
                     if let id = model.active?.activeTabID { model.closeTab(id) }
@@ -41,14 +50,6 @@ struct BetterTerminalApp: App {
                         .keyboardShortcut(KeyEquivalent(Character("\(i + 1)")), modifiers: [.control, .command])
                 }
             }
-        }
-
-        Settings {
-            SettingsView()
-                .environment(model)
-                .environment(\.theme, model.theme)
-                .preferredColorScheme(model.colorScheme)
-                .tint(model.theme.accent)
         }
     }
 }

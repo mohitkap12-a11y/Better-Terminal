@@ -32,6 +32,7 @@ zsh/bash/fish hook scripts (Core `ShellIntegration`) are written to `Application
 3. [x] Terminal engine (SwiftTerm), PTY, shell integration
 4. [x] Layout picker + pane grid
 5. [x] History drawer (per tab) + restore on launch
-6. [x] Command palette (⌘K), history actions, optional AI (Claude / Ollama)
-7. [x] Release tooling: sign, notarize, DMG, Homebrew cask (untested)
-8. [ ] libghostty backend, inline images, plugin API, command-block output capture
+6. [x] Command palette (⌘K), history actions
+7. [x] Release: Developer ID signing, notarized DMG, Sparkle in-app updates, GitHub release workflow (docs/release.md), Homebrew cask
+8. [x] Soft colour themes, MacPeek-style sidebar and in-window settings, app icon, right-click copy
+9. [ ] libghostty backend, inline images, plugin API, command-block output capture
