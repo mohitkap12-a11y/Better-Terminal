@@ -14,15 +14,6 @@ protocol TerminalSession: AnyObject {
     func terminate()
 }
 
-final class BTTerminalView: LocalProcessTerminalView {
-    var onFocus: (() -> Void)?
-    override func becomeFirstResponder() -> Bool {
-        let ok = super.becomeFirstResponder()
-        if ok { onFocus?() }
-        return ok
-    }
-}
-
 final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalViewDelegate {
     struct Callbacks {
         var onCommand: @MainActor (HistoryEntry) -> Void
@@ -32,7 +23,8 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
         var onFocus: @MainActor () -> Void
     }
 
-    private let view = BTTerminalView(frame: .zero)
+    private let view = LocalProcessTerminalView(frame: .zero)
+    private var clickMonitor: Any?
     private var tracker: CommandTracker
     private let callbacks: Callbacks
     var nsView: NSView { view }
@@ -42,7 +34,14 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
         self.callbacks = callbacks
         super.init()
         view.processDelegate = self
-        view.onFocus = { Task { @MainActor in callbacks.onFocus() } }
+        // LocalProcessTerminalView's responder methods are not `open`, so detect focus via clicks.
+        clickMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            if let v = self?.view, let w = v.window, event.window === w,
+               v.bounds.contains(v.convert(event.locationInWindow, from: nil)) {
+                Task { @MainActor in callbacks.onFocus() }
+            }
+            return event
+        }
         installOscHandlers()
 
         try? ShellIntegration.install(into: integrationDir)
@@ -93,7 +92,12 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
         if view.font.pointSize != f.pointSize { view.font = f }
     }
 
-    func terminate() { view.process.terminate() }
+    func terminate() {
+        if let m = clickMonitor { NSEvent.removeMonitor(m); clickMonitor = nil }
+        view.process.terminate()
+    }
+
+    deinit { if let m = clickMonitor { NSEvent.removeMonitor(m) } }
 
     // MARK: LocalProcessTerminalViewDelegate
     func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {}
