@@ -1,0 +1,15 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test
+  app:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - run: xcodebuild -project BetterTerminal.xcodeproj -scheme BetterTerminal -destination 'platform=macOS' -skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO build

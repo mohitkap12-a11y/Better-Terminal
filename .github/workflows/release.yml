@@ -1,0 +1,203 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+
+# Required repository secrets (never commit these); same names as MacPeek, so the same keys work:
+#   DEVELOPER_ID_CERT_P12_BASE64, DEVELOPER_ID_CERT_PASSWORD, DEVELOPER_ID_IDENTITY
+#   NOTARY_API_KEY_P8_BASE64, NOTARY_API_KEY_ID, NOTARY_API_ISSUER_ID
+# Sparkle in-app updates: repository secret SPARKLE_ED_PRIVATE_KEY (signs the update) and repository VARIABLE
+# SPARKLE_PUBLIC_ED_KEY (the matching public key baked into the app). See docs/release.md.
+#
+# Tags (docs/release.md):
+#   v0.2.0         stable: GitHub release ("latest", so releases/latest/download/appcast.xml offers it to everyone);
+#                  its item also replaces the preview feed so opted-in Macs move on to it.
+#   v0.2.0-beta.1  preview: GitHub pre-release; appcast-beta.xml is replaced on the fixed `preview-feed` pre-release.
+#                  Only Macs that chose "Beta" in Settings → Updates read it.
+#   v0.2.0-rc1     dry run (any other hyphenated tag): GitHub pre-release only; no feed is touched.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version
+        run: |
+          echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          # CHANNEL: stable -> appcast.xml (everyone); beta -> appcast-beta.xml (opted-in Macs); dryrun -> no feed.
+          if [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then CHANNEL=stable
+          elif [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$ ]]; then CHANNEL=beta
+          elif [[ "$GITHUB_REF_NAME" == *-* ]]; then CHANNEL=dryrun
+          else echo "::error::Tag $GITHUB_REF_NAME is not vX.Y.Z, vX.Y.Z-beta.N or a hyphenated dry run (docs/release.md)."; exit 1; fi
+          echo "CHANNEL=$CHANNEL" >> "$GITHUB_ENV"
+          echo "Channel: $CHANNEL"
+
+      - name: Check the preview feed address matches the app
+        run: |
+          PREVIEW="$(/usr/libexec/PlistBuddy -c 'Print :BetterTerminalPreviewFeedURL' Resources/Info.plist)"
+          WANT="https://github.com/${GITHUB_REPOSITORY}/releases/download/preview-feed/appcast-beta.xml"
+          test "$PREVIEW" = "$WANT" || { echo "::error::BetterTerminalPreviewFeedURL in Resources/Info.plist ($PREVIEW) is not $WANT. Change them together."; exit 1; }
+
+      - name: Require release notes for stable releases
+        # The update window shows docs/release-notes/<tag>.md, so a stable release cannot ship without it.
+        if: ${{ env.CHANNEL == 'stable' }}
+        run: |
+          F="docs/release-notes/${GITHUB_REF_NAME}.md"
+          test -s "$F" || { echo "::error::$F is missing or empty. Sparkle's update window shows it as the release notes (docs/release.md)."; exit 1; }
+          ! grep -q ']]>' "$F" || { echo "::error::$F contains ']]>', which would end the appcast's CDATA block early."; exit 1; }
+
+      - name: Require Sparkle keys
+        env:
+          SPARKLE_PRIVATE: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+          SPARKLE_PUBLIC: ${{ vars.SPARKLE_PUBLIC_ED_KEY }}
+        run: |
+          test -n "$SPARKLE_PRIVATE" || { echo "::error::Secret SPARKLE_ED_PRIVATE_KEY is not set (see docs/release.md, Sparkle setup)."; exit 1; }
+          test -n "$SPARKLE_PUBLIC" || { echo "::error::Repository variable SPARKLE_PUBLIC_ED_KEY is not set (see docs/release.md, Sparkle setup)."; exit 1; }
+
+      - name: Test
+        run: swift test
+
+      - name: Install tools
+        run: brew install xcodegen
+
+      - name: Import signing certificate
+        env:
+          CERT_P12: ${{ secrets.DEVELOPER_ID_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.DEVELOPER_ID_CERT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/build.keychain"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          echo "$CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain
+          rm "$RUNNER_TEMP/cert.p12"
+
+      - name: Build and sign app (Developer ID, hardened runtime)
+        env:
+          SIGN_IDENTITY: ${{ secrets.DEVELOPER_ID_IDENTITY }}
+          SPARKLE_PUBLIC_ED_KEY: ${{ vars.SPARKLE_PUBLIC_ED_KEY }}
+        run: |
+          test -n "$SIGN_IDENTITY" || { echo "DEVELOPER_ID_IDENTITY missing — refusing to publish unsigned build"; exit 1; }
+          scripts/build-app.sh "$VERSION"
+
+      - name: Create DMG
+        env:
+          SIGN_IDENTITY: ${{ secrets.DEVELOPER_ID_IDENTITY }}
+        run: scripts/make-dmg.sh "$VERSION"
+
+      - name: Notarize and staple (fails the release if rejected)
+        env:
+          NOTARY_KEY: ${{ secrets.NOTARY_API_KEY_P8_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_API_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.NOTARY_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          echo "$NOTARY_KEY" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+          xcrun notarytool submit "dist/BetterTerminal-${VERSION}.dmg" \
+            --key "$RUNNER_TEMP/notary.p8" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER" \
+            --wait --timeout 30m
+          xcrun stapler staple "dist/BetterTerminal-${VERSION}.dmg"
+          xcrun stapler validate "dist/BetterTerminal-${VERSION}.dmg"
+          spctl --assess --type open --context context:primary-signature -v "dist/BetterTerminal-${VERSION}.dmg"
+          rm "$RUNNER_TEMP/notary.p8"
+
+      - name: Sign update and write the feed (Sparkle)
+        # Sign the final, stapled DMG, then describe it in the update feed the app reads
+        # (releases/latest/download/appcast.xml always resolves to the newest stable release's feed).
+        env:
+          SPARKLE_PRIVATE: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          # sign_update ships inside the Sparkle package the build already resolved and checksum-verified
+          # (the version pinned in project.yml), so no separate, unverified download runs with the private key.
+          SIGN_UPDATE="$(find build/DerivedData -type f -name sign_update | head -1)"
+          test -x "$SIGN_UPDATE" || { echo "::error::sign_update not found in the resolved Sparkle package"; exit 1; }
+          DMG="dist/BetterTerminal-${VERSION}.dmg"
+          SIG="$(printf '%s' "$SPARKLE_PRIVATE" | "$SIGN_UPDATE" --ed-key-file - -p "$DMG")"
+          test -n "$SIG" || { echo "::error::sign_update produced no signature"; exit 1; }
+          LENGTH="$(stat -f%z "$DMG")"
+          # What Sparkle compares: the built app's CFBundleVersion (hyphen-free, 0.4.0-beta.1 -> 0.4.0b1).
+          BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "build/Better Terminal.app/Contents/Info.plist")"
+          [[ -n "$BUILD" && "$BUILD" != *-* ]] || { echo "::error::CFBundleVersion '$BUILD' is empty or has a hyphen; Sparkle would ignore what follows it."; exit 1; }
+          TITLE="Better Terminal"; [ "$CHANNEL" = beta ] && TITLE="Better Terminal (preview)"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/BetterTerminal-${VERSION}.dmg"
+          FULL_NOTES="https://github.com/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}"
+          # Release notes shown inside Sparkle's update window: the tag's own file, or for -beta.N / dry-run tags the
+          # file of the version they lead to. Embedded as markdown; the leading "# ..." heading is dropped.
+          NOTES_FILE="docs/release-notes/${GITHUB_REF_NAME}.md"
+          [ -f "$NOTES_FILE" ] || NOTES_FILE="docs/release-notes/v${VERSION%%-*}.md"
+          DESCRIPTION=""
+          if [ -s "$NOTES_FILE" ]; then
+            ! grep -q ']]>' "$NOTES_FILE" || { echo "::error::$NOTES_FILE contains ']]>', which would end the CDATA block early."; exit 1; }
+            DESCRIPTION="<description sparkle:format=\"markdown\"><![CDATA[$(sed '1{/^# /d;}' "$NOTES_FILE")]]></description>"
+            echo "Release notes: $NOTES_FILE"
+          else
+            echo "::warning::No release notes file for $GITHUB_REF_NAME; the update window will show none."
+          fi
+          cat > dist/appcast.xml <<XML
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>${TITLE}</title>
+              <item>
+                <title>Better Terminal ${VERSION}</title>
+                <pubDate>$(LC_ALL=C date -u "+%a, %d %b %Y %H:%M:%S +0000")</pubDate>
+                <sparkle:version>${BUILD}</sparkle:version>
+                <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+                ${DESCRIPTION}
+                <sparkle:fullReleaseNotesLink>${FULL_NOTES}</sparkle:fullReleaseNotesLink>
+                <enclosure url="${URL}" length="${LENGTH}" type="application/octet-stream" sparkle:edSignature="${SIG}"/>
+              </item>
+            </channel>
+          </rss>
+          XML
+          xmllint --noout dist/appcast.xml
+          cat dist/appcast.xml
+          # The preview feed has the same item: a beta publishes it as appcast-beta.xml; a stable release does too, so
+          # opted-in Macs move on to it. (A dry run publishes neither.)
+          sed "s#<title>Better Terminal</title>#<title>Better Terminal (preview)</title>#" dist/appcast.xml > dist/appcast-beta.xml
+          xmllint --noout dist/appcast-beta.xml
+
+      - name: Add versionless DMG and checksums
+        # releases/latest/download/BetterTerminal.dmg never changes name, so a Download button always serves the newest.
+        run: |
+          set -euo pipefail
+          cd dist
+          cp "BetterTerminal-${VERSION}.dmg" BetterTerminal.dmg
+          shasum -a 256 "BetterTerminal-${VERSION}.dmg" BetterTerminal.dmg > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/BetterTerminal-${{ env.VERSION }}.dmg
+            dist/BetterTerminal.dmg
+            dist/SHA256SUMS
+            dist/appcast.xml
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+
+      - name: Publish the preview feed (appcast-beta.xml on the preview-feed pre-release)
+        # A fixed pre-release (tag `preview-feed`, never "latest", never matches v*) whose one asset is replaced each
+        # time. It runs after the versioned release is public, so the feed never points at a DMG that is not there yet.
+        if: ${{ env.CHANNEL != 'dryrun' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: preview-feed
+          target_commitish: ${{ github.sha }}
+          name: Preview feed (do not delete)
+          body: Holds appcast-beta.xml, the update feed for Macs opted in to Better Terminal preview builds. Replaced by every stable and -beta.N release. See docs/release.md, "Preview builds".
+          prerelease: true
+          make_latest: false
+          files: dist/appcast-beta.xml
+          overwrite_files: true
