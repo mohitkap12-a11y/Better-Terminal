@@ -19,6 +19,7 @@ public final class WorkspaceStore: @unchecked Sendable {
     public init(directory: URL) throws {
         self.directory = directory
         try FileManager.default.createDirectory(at: historyDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: snapshotDir, withIntermediateDirectories: true)
     }
 
     /// ~/Library/Application Support/BetterTerminal
@@ -29,6 +30,8 @@ public final class WorkspaceStore: @unchecked Sendable {
 
     private var stateURL: URL { directory.appendingPathComponent("state.json") }
     private var historyDir: URL { directory.appendingPathComponent("history", isDirectory: true) }
+    private var snapshotDir: URL { directory.appendingPathComponent("snapshots", isDirectory: true) }
+    private func snapshotURL(_ tab: UUID) -> URL { snapshotDir.appendingPathComponent("\(tab.uuidString).txt") }
     private func historyURL(_ tab: UUID) -> URL { historyDir.appendingPathComponent("\(tab.uuidString).jsonl") }
 
     public func loadState() -> AppState {
@@ -79,5 +82,31 @@ public final class WorkspaceStore: @unchecked Sendable {
 
     public func deleteHistory(tab: UUID) {
         queue.sync { try? FileManager.default.removeItem(at: historyURL(tab)) }
+    }
+
+    // MARK: Terminal text snapshots
+
+    /// Stores the (already prepared) text of a terminal. Empty text removes the snapshot.
+    public func saveSnapshot(_ text: String, tab: UUID) throws {
+        try queue.sync {
+            if text.isEmpty { try? FileManager.default.removeItem(at: snapshotURL(tab)); return }
+            try text.write(to: snapshotURL(tab), atomically: true, encoding: .utf8)
+        }
+    }
+
+    public func loadSnapshot(tab: UUID) -> String? {
+        queue.sync { try? String(contentsOf: snapshotURL(tab), encoding: .utf8) }
+    }
+
+    public func deleteSnapshot(tab: UUID) {
+        queue.sync { try? FileManager.default.removeItem(at: snapshotURL(tab)) }
+    }
+
+    /// Removes every saved terminal text.
+    public func clearSnapshots() {
+        queue.sync {
+            try? FileManager.default.removeItem(at: snapshotDir)
+            try? FileManager.default.createDirectory(at: snapshotDir, withIntermediateDirectories: true)
+        }
     }
 }

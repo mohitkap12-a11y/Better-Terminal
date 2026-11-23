@@ -196,3 +196,49 @@ final class PaneNavigationTests: XCTestCase {
         XCTAssertEqual(PaneLayout(rows: 1, columns: 2).neighbor(of: 0, .down, paneCount: 4), 2)
     }
 }
+
+final class SnapshotTests: XCTestCase {
+    func testPrepareTrimsAndCleans() {
+        let raw = "$ ls   \r\nfile\u{1B}[31m\r\n\r\n\r\n"
+        XCTAssertEqual(TerminalText.prepare(raw), "$ ls\nfile[31m")
+        XCTAssertEqual(TerminalText.prepare("\n\n  \n"), "")
+    }
+
+    func testPrepareKeepsLastLines() {
+        let raw = (1...10).map { "l\($0)" }.joined(separator: "\n")
+        XCTAssertEqual(TerminalText.prepare(raw, maxLines: 3), "l8\nl9\nl10")
+    }
+
+    func testReplayPayload() {
+        XCTAssertEqual(TerminalText.replayPayload(""), "")
+        let p = TerminalText.replayPayload("a\nb")
+        XCTAssertTrue(p.hasPrefix("a\r\nb\r\n"))
+        XCTAssertTrue(p.contains("restored from previous session"))
+        XCTAssertFalse(p.contains("\n\n"))
+    }
+
+    func testSnapshotsSurviveRelaunchAndClear() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let s1 = try WorkspaceStore(directory: dir)
+        let a = UUID(), b = UUID()
+        try s1.saveSnapshot("hello", tab: a)
+        try s1.saveSnapshot("world", tab: b)
+        let s2 = try WorkspaceStore(directory: dir)
+        XCTAssertEqual(s2.loadSnapshot(tab: a), "hello")
+        s2.deleteSnapshot(tab: a)
+        XCTAssertNil(s2.loadSnapshot(tab: a))
+        try s2.saveSnapshot("", tab: b)                    // empty removes
+        XCTAssertNil(s2.loadSnapshot(tab: b))
+        try s2.saveSnapshot("x", tab: b)
+        s2.clearSnapshots()
+        XCTAssertNil(s2.loadSnapshot(tab: b))
+    }
+
+    func testRestoreSettingDefaultsOn() throws {
+        let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
+        var obj = try JSONSerialization.jsonObject(with: enc.encode(AppState.fresh())) as! [String: Any]
+        obj.removeValue(forKey: "restoreTerminalText")
+        let s = try JSONDecoder().decode(AppState.self, from: JSONSerialization.data(withJSONObject: obj))
+        XCTAssertTrue(s.restoreTerminalText)
+    }
+}

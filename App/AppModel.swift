@@ -38,6 +38,14 @@ final class AppModel {
         self.integrationDir = store.directory.appendingPathComponent("shell-integration", isDirectory: true)
         self.eventsDir = store.directory.appendingPathComponent("events", isDirectory: true)
         self.state = store.loadState()
+        // Keep the saved terminal text fresh in case of a crash or force quit.
+        Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                guard let self else { return }
+                self.saveSnapshots()
+            }
+        }
     }
 
     // MARK: Derived
@@ -75,6 +83,7 @@ final class AppModel {
         state.workspaces[i].tabs.forEach {
             sessions[$0.id]?.terminate(); sessions[$0.id] = nil
             store.deleteHistory(tab: $0.id)
+            store.deleteSnapshot(tab: $0.id)
         }
         state.workspaces.remove(at: i)
         if state.activeWorkspaceID == id { state.activeWorkspaceID = state.workspaces[max(0, i - 1)].id }
@@ -107,6 +116,7 @@ final class AppModel {
         mutateActive { $0.closeTab(id) }
         sessions[id]?.terminate(); sessions[id] = nil
         store.deleteHistory(tab: id)
+        store.deleteSnapshot(tab: id)
     }
 
     func setLayout(_ layout: PaneLayout) { mutateActive { $0.layout = layout } }
@@ -116,7 +126,8 @@ final class AppModel {
         if let s = sessions[tab.id] { return s }
         let id = tab.id
         let s = SwiftTermSession(tab: tab, integrationDir: integrationDir,
-                                eventFile: eventsDir.appendingPathComponent("\(tab.id.uuidString).log"), callbacks: .init(
+                                eventFile: eventsDir.appendingPathComponent("\(tab.id.uuidString).log"),
+                                restoredText: state.restoreTerminalText ? store.loadSnapshot(tab: tab.id) : nil, callbacks: .init(
             onCommand: { [weak self] in self?.record($0, tab: id) },
             onCwd: { [weak self] in self?.updateCwd(tab: id, to: $0) },
             onTitle: { [weak self] in self?.setTitle(tab: id, $0) },
@@ -132,6 +143,7 @@ final class AppModel {
     }
 
     private func restart(tab id: UUID) {
+        saveSnapshot(of: id)               // keep the text when the shell exits and a new one starts
         sessions[id] = nil
         guard state.workspaces.contains(where: { $0.tabs.contains { $0.id == id } }) else { return }
         restartCounter += 1
@@ -197,5 +209,24 @@ final class AppModel {
         }
     }
 
-    func saveNow() { saveTask?.cancel(); try? store.saveState(state) }
+    func saveNow() {
+        saveTask?.cancel()
+        try? store.saveState(state)
+        saveSnapshots()
+    }
+
+    // MARK: Terminal text (resume on relaunch)
+
+    private func saveSnapshot(of id: UUID) {
+        guard state.restoreTerminalText, let s = sessions[id] else { return }
+        try? store.saveSnapshot(TerminalText.prepare(s.snapshotText()), tab: id)
+    }
+
+    /// Saves the text of every running terminal. Tabs that were not opened this launch keep their old snapshot.
+    func saveSnapshots() {
+        guard state.restoreTerminalText else { return }
+        for id in sessions.keys { saveSnapshot(of: id) }
+    }
+
+    func clearSavedTerminalText() { store.clearSnapshots() }
 }

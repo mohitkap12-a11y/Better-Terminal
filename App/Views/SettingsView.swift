@@ -90,6 +90,16 @@ private struct TerminalSection: View {
                 Stepper("\(Int(model.state.terminalFontSize)) pt", value: $model.state.terminalFontSize, in: 9...32, step: 1)
                     .monospacedDigit()
             }
+            SettingsRow(title: "Resume on relaunch",
+                        subtitle: "Reopen your workspaces and tabs with their text and history. Running programs can't be revived; a fresh shell starts below. The text is stored on this Mac and may contain anything you printed, so turn this off if you handle secrets.") {
+                Toggle("", isOn: $model.state.restoreTerminalText).labelsHidden().toggleStyle(.switch)
+                    .onChange(of: model.state.restoreTerminalText) { _, on in
+                        if !on { model.clearSavedTerminalText() }
+                    }
+            }
+            SettingsRow(title: "Saved terminal text", subtitle: "Delete the text saved for resuming. History is kept.") {
+                PillButton(title: "Clear") { model.clearSavedTerminalText() }
+            }
         }
     }
 }

@@ -12,6 +12,8 @@ protocol TerminalSession: AnyObject {
     func run(_ text: String)         // replaces the current prompt line and runs
     func apply(theme: Theme, scheme: ColorScheme, fontSize: Double)
     func terminate()
+    /// Plain text of the terminal (scrollback + screen), for restoring it after a relaunch.
+    func snapshotText() -> String
 }
 
 /// Follows an append-only file and reports each complete new line (on the main queue).
@@ -76,12 +78,18 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
     private let shellKind: ShellIntegration.Kind
     var nsView: NSView { view }
 
-    init(tab: TerminalTab, integrationDir: URL, eventFile: URL, callbacks: Callbacks) {
+    init(tab: TerminalTab, integrationDir: URL, eventFile: URL, restoredText: String? = nil, callbacks: Callbacks) {
         self.tracker = CommandTracker(cwd: tab.cwd)
         self.callbacks = callbacks
         self.shellKind = ShellIntegration.kind(forShellPath: tab.shell)
         super.init()
         view.processDelegate = self
+        view.changeScrollback(5000)
+        // Show what was on screen last time, then a fresh shell starts below it.
+        if let saved = restoredText {
+            let payload = TerminalText.replayPayload(saved)
+            if !payload.isEmpty { view.feed(text: payload) }
+        }
 
         // LocalProcessTerminalView's responder methods are not `open`, so detect focus via clicks.
         clickMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
@@ -147,6 +155,10 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
         view.nativeForegroundColor = NSColor(theme.terminalForeground(scheme))
         let f = NSFont.monospacedSystemFont(ofSize: CGFloat(fontSize), weight: .regular)
         if view.font.pointSize != f.pointSize { view.font = f }
+    }
+
+    func snapshotText() -> String {
+        String(decoding: view.getBufferAsData(kind: .normal), as: UTF8.self)
     }
 
     func terminate() {
