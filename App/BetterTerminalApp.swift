@@ -24,7 +24,7 @@ struct BetterTerminalApp: App {
                 Button("New Workspace") { model.addWorkspace() }.keyboardShortcut("n", modifiers: [.command, .shift])
                 Button("Close Tab") {
                     if let id = model.active?.activeTabID { model.closeTab(id) }
-                }.keyboardShortcut("w")
+                }.keyboardShortcut("w").disabled((model.active?.tabs.count ?? 0) < 2)
             }
             CommandMenu("View") {
                 Button("Command Palette") { model.paletteOpen = true }.keyboardShortcut("k")

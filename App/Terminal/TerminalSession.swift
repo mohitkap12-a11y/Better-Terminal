@@ -79,11 +79,11 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
     func focus() { view.window?.makeFirstResponder(view) }
 
     func insert(_ text: String) {
-        view.send(txt: "\u{15}" + text)       // Ctrl-U clears the line first
+        view.send(txt: PromptInput.insertPayload(text, bracketedPaste: view.getTerminal().bracketedPasteMode))
     }
 
     func run(_ text: String) {
-        view.send(txt: "\u{15}" + text + "\r")
+        view.send(txt: PromptInput.runPayload(text, bracketedPaste: view.getTerminal().bracketedPasteMode))
     }
 
     func apply(theme: Theme, scheme: ColorScheme, fontSize: Double) {

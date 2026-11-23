@@ -86,10 +86,9 @@ final class AppModel {
     func newTab() { mutateActive { $0.addTab() } }
 
     func closeTab(_ id: UUID) {
-        mutateActive { ws in
-            guard ws.tabs.count > 1 else { return }
-            ws.closeTab(id)
-        }
+        // A workspace always keeps at least one tab.
+        guard let ws = active, ws.tabs.count > 1, ws.tabs.contains(where: { $0.id == id }) else { return }
+        mutateActive { $0.closeTab(id) }
         sessions[id]?.terminate(); sessions[id] = nil
         store.deleteHistory(tab: id)
     }

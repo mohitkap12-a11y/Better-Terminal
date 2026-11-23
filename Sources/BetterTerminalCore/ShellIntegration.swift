@@ -117,6 +117,11 @@ public enum ShellIntegration {
         }
     }
 
+    /// Single-quotes a string for fish (paths like "Application Support" contain spaces).
+    public static func fishQuote(_ s: String) -> String {
+        "'" + s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'") + "'"
+    }
+
     // MARK: Payload parsing
     public static func decodeBase64(_ s: String) -> String? {
         guard let d = Data(base64Encoded: s.trimmingCharacters(in: .whitespacesAndNewlines)) else { return nil }
@@ -148,5 +153,37 @@ public struct CommandTracker: Sendable {
         guard let p = pending else { return nil }
         return HistoryEntry(command: p.command, cwd: p.cwd, exitCode: exitCode,
                             startedAt: p.start, duration: date.timeIntervalSince(p.start))
+    }
+}
+
+/// Builds the bytes sent to the shell when inserting/running text at the prompt.
+public enum PromptInput {
+    static let clearLine = "\u{15}"          // Ctrl-U
+    static let pasteStart = "\u{1B}[200~", pasteEnd = "\u{1B}[201~"
+
+    /// Removes control characters (ESC, CR, etc.) that could end a paste early or execute input.
+    /// Keeps newline and tab. CRLF/CR become LF.
+    public static func sanitize(_ text: String) -> String {
+        let unified = text.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
+        return String(String.UnicodeScalarView(unified.unicodeScalars.filter {
+            $0 == "\n" || $0 == "\t" || ($0.value >= 0x20 && $0.value != 0x7F)
+        }))
+    }
+
+    /// Text to type at the prompt WITHOUT executing it.
+    /// Multi-line text uses bracketed paste so embedded newlines stay in the edit buffer.
+    /// If the shell has not enabled bracketed paste, lines are joined with "; " (never a raw newline).
+    public static func insertPayload(_ text: String, bracketedPaste: Bool) -> String {
+        let clean = sanitize(text)
+        guard clean.contains("\n") else { return clearLine + clean }
+        if bracketedPaste { return clearLine + pasteStart + clean + pasteEnd }
+        let joined = clean.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }.joined(separator: "; ")
+        return clearLine + joined
+    }
+
+    /// Same as insert, followed by Enter.
+    public static func runPayload(_ text: String, bracketedPaste: Bool) -> String {
+        insertPayload(text, bracketedPaste: bracketedPaste) + "\r"
     }
 }

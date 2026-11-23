@@ -124,3 +124,30 @@ final class IntegrationTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: dir.appendingPathComponent("fish/bt.fish").path))
     }
 }
+
+final class ReviewFixTests: XCTestCase {
+    func testFishPathWithSpacesIsQuoted() {
+        let dir = URL(fileURLWithPath: "/Users/me/Library/Application Support/BetterTerminal/shell-integration")
+        let spec = ShellIntegration.launchSpec(shell: "/opt/homebrew/bin/fish", cwd: "/", baseEnv: [:], integrationDir: dir)
+        XCTAssertEqual(spec.args[1], "source '/Users/me/Library/Application Support/BetterTerminal/shell-integration/fish/bt.fish'")
+        XCTAssertEqual(ShellIntegration.fishQuote("it's"), "'it\\'s'")
+    }
+
+    func testMultilineInsertNeverSendsRawNewlineOutsidePaste() {
+        let p = PromptInput.insertPayload("echo a\necho b", bracketedPaste: true)
+        XCTAssertEqual(p, "\u{15}\u{1B}[200~echo a\necho b\u{1B}[201~")
+        let q = PromptInput.insertPayload("echo a\necho b", bracketedPaste: false)
+        XCTAssertFalse(q.contains("\n"))
+        XCTAssertFalse(q.contains("\r"))
+        XCTAssertEqual(q, "\u{15}echo a; echo b")
+    }
+
+    func testSanitizeStripsEscapeAndCR() {
+        XCTAssertEqual(PromptInput.sanitize("ls\u{1B}[201~; rm x\r\n"), "ls[201~; rm x\n")
+        XCTAssertEqual(PromptInput.insertPayload("ls\r", bracketedPaste: false), "\u{15}ls")
+    }
+
+    func testRunAppendsEnterOnce() {
+        XCTAssertEqual(PromptInput.runPayload("ls", bracketedPaste: true), "\u{15}ls\r")
+    }
+}
