@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/app-dark.png" alt="Better Terminal: sidebar with workspaces, tabs and four terminal panes (illustration)" width="860">
+  <img src="docs/images/app-dark.png" alt="Better Terminal with three panes side by side in a 1×3 layout" width="860">
 </p>
 
 ## Features
@@ -84,7 +84,7 @@ Tag-driven: `v1.2.3` is a stable release, `v1.2.3-beta.1` goes to the Beta chann
 
 ## Website
 
-The site in [`site/`](site) is plain HTML and CSS, deployed to GitHub Pages by `.github/workflows/pages.yml`. To show real screenshots instead of the illustration, run `scripts/screenshot.sh dark` (and `light`) on a Mac with the app open.
+The site in [`site/`](site) is plain HTML and CSS, deployed to GitHub Pages by `.github/workflows/pages.yml`. The hero shows the real screenshots in `site/assets/screenshots/`. Retake them with `scripts/screenshot.sh dark` (and `light`) on a Mac with the app open; delete the PNGs to fall back to the built-in illustration.
 
 ## License
 
