@@ -111,7 +111,7 @@ public enum ShellIntegration {
         case .bash:
             return LaunchSpec(args: ["--rcfile", integrationDir.appendingPathComponent("bash/bashrc.sh").path], env: env)
         case .fish:
-            return LaunchSpec(args: ["--init-command", "source " + integrationDir.appendingPathComponent("fish/bt.fish").path], env: env)
+            return LaunchSpec(args: ["--init-command", "source " + fishQuote(integrationDir.appendingPathComponent("fish/bt.fish").path)], env: env)
         case .other:
             return LaunchSpec(args: ["-l"], env: env)
         }

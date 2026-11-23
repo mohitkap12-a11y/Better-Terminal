@@ -11,7 +11,7 @@ rm -rf "$OUT"; mkdir -p "$OUT"
 
 xcodegen generate
 xcodebuild archive -project BetterTerminal.xcodeproj -scheme BetterTerminal -configuration Release \
-  -archivePath "$ARCHIVE" MARKETING_VERSION="$VERSION" \
+  -archivePath "$ARCHIVE" -skipPackagePluginValidation -skipMacroValidation MARKETING_VERSION="$VERSION" \
   CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Developer ID Application" DEVELOPMENT_TEAM="$TEAM_ID" \
   OTHER_CODE_SIGN_FLAGS="--timestamp --options runtime"
 
