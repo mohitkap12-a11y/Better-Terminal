@@ -1,4 +1,5 @@
 import SwiftUI
+import BetterTerminalCore
 
 /// Page title + one line about the page.
 struct PageHeader: View {
