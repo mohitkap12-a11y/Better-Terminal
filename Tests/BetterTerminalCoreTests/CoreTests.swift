@@ -120,7 +120,7 @@ final class IntegrationTests: XCTestCase {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try ShellIntegration.install(into: dir)
         let z = try String(contentsOf: dir.appendingPathComponent("zsh/.zshrc"), encoding: .utf8)
-        XCTAssertTrue(z.contains("7777"))
+        XCTAssertTrue(z.contains("BT_EVENT_FILE"))
         XCTAssertTrue(FileManager.default.fileExists(atPath: dir.appendingPathComponent("fish/bt.fish").path))
     }
 }
@@ -149,5 +149,21 @@ final class ReviewFixTests: XCTestCase {
 
     func testRunAppendsEnterOnce() {
         XCTAssertEqual(PromptInput.runPayload("ls", bracketedPaste: true), "\u{15}ls\r")
+    }
+}
+
+final class EventTests: XCTestCase {
+    func testParseEvents() {
+        XCTAssertEqual(ShellEvent.parse("S\tbHMgLWxh"), .commandStarted("ls -la"))
+        XCTAssertEqual(ShellEvent.parse("D\t127"), .commandFinished(127))
+        XCTAssertEqual(ShellEvent.parse("C\tL3RtcA=="), .cwd("/tmp"))
+        XCTAssertNil(ShellEvent.parse("garbage"))
+        XCTAssertNil(ShellEvent.parse("X\t1"))
+    }
+
+    func testLaunchSpecSetsEventFile() {
+        let s = ShellIntegration.launchSpec(shell: "/bin/zsh", cwd: "/", baseEnv: [:],
+                                            integrationDir: URL(fileURLWithPath: "/x"), eventFile: "/e/1.log")
+        XCTAssertEqual(s.env["BT_EVENT_FILE"], "/e/1.log")
     }
 }

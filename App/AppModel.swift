@@ -9,6 +9,7 @@ final class AppModel {
     @ObservationIgnored private var saveTask: Task<Void, Never>?
     @ObservationIgnored private var sessions: [UUID: TerminalSession] = [:]
     @ObservationIgnored private let integrationDir: URL
+    @ObservationIgnored private let eventsDir: URL
 
     // UI triggers (keyboard shortcuts)
     var paletteOpen = false
@@ -28,6 +29,7 @@ final class AppModel {
         }
         self.store = store
         self.integrationDir = store.directory.appendingPathComponent("shell-integration", isDirectory: true)
+        self.eventsDir = store.directory.appendingPathComponent("events", isDirectory: true)
         self.state = store.loadState()
     }
 
@@ -99,7 +101,8 @@ final class AppModel {
     func session(for tab: TerminalTab) -> TerminalSession {
         if let s = sessions[tab.id] { return s }
         let id = tab.id
-        let s = SwiftTermSession(tab: tab, integrationDir: integrationDir, callbacks: .init(
+        let s = SwiftTermSession(tab: tab, integrationDir: integrationDir,
+                                eventFile: eventsDir.appendingPathComponent("\(tab.id.uuidString).log"), callbacks: .init(
             onCommand: { [weak self] in self?.record($0, tab: id) },
             onCwd: { [weak self] in self?.updateCwd(tab: id, to: $0) },
             onTitle: { [weak self] in self?.setTitle(tab: id, $0) },

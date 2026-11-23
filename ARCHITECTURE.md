@@ -24,7 +24,7 @@ Layout is per workspace (`PaneLayout` rows x columns). New tabs/panes fill row-m
 libghostty remains the target: its embedding API is unstable upstream, so swap it in behind the same protocol once pinned and verified on a Mac.
 
 ## Shell integration
-zsh/bash/fish hook scripts (Core `ShellIntegration`) are written to `Application Support/BetterTerminal/shell-integration` and loaded via ZDOTDIR / `--rcfile` / `--init-command`. They emit private OSC sequences (command, exit code, cwd) -> `CommandTracker` -> `HistoryEntry`. User rc files are sourced first.
+zsh/bash/fish hook scripts (Core `ShellIntegration`) are written to `Application Support/BetterTerminal/shell-integration` and loaded via ZDOTDIR / `--rcfile` / `--init-command`. They append events (command, exit code, cwd) to a per-tab file under `events/`, which the app tails -> `ShellEvent` -> `CommandTracker` -> `HistoryEntry`. (SwiftTerm exposes no OSC hooks, and this keeps integration engine-independent.) User rc files are sourced first.
 
 ## Roadmap
 1. [x] Core models, persistence, tests, CI

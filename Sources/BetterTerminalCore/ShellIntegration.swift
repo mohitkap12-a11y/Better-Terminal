@@ -1,10 +1,11 @@
 import Foundation
 
-/// Shell hooks that report each command, its exit code and the cwd to the terminal
-/// via private OSC escape sequences (no output is captured, commands only):
-///   OSC 7777 ; base64(command)   -- command about to run
-///   OSC 133 ; D ; <exit>         -- command finished
-///   OSC 7779 ; base64(cwd)       -- prompt shown, current directory
+/// Shell hooks report each command, its exit code and the cwd by appending lines to a
+/// per-tab event file ($BT_EVENT_FILE). The app tails that file. This keeps shell integration
+/// independent of the terminal engine (SwiftTerm exposes no OSC hooks; libghostty can reuse it).
+///   S<TAB>base64(command)   command about to run
+///   D<TAB>exit              command finished
+///   C<TAB>base64(cwd)       prompt shown, current directory
 public enum ShellIntegration {
     public enum Kind: Sendable { case zsh, bash, fish, other }
 
@@ -33,11 +34,12 @@ public enum ShellIntegration {
     [[ -n "$BT_START_DIR" && -d "$BT_START_DIR" ]] && cd "$BT_START_DIR"
     autoload -Uz add-zsh-hook
     __bt_b64() { printf %s "$1" | base64 | tr -d '\n'; }
-    __bt_preexec() { printf '\033]7777;%s\007' "$(__bt_b64 "$1")"; }
+    __bt_emit() { [[ -n "$BT_EVENT_FILE" ]] && printf '%s\t%s\n' "$1" "$2" >> "$BT_EVENT_FILE"; }
+    __bt_preexec() { __bt_emit S "$(__bt_b64 "$1")"; }
     __bt_precmd() {
       local c=$?
-      printf '\033]133;D;%s\007' "$c"
-      printf '\033]7779;%s\007' "$(__bt_b64 "$PWD")"
+      __bt_emit D "$c"
+      __bt_emit C "$(__bt_b64 "$PWD")"
     }
     add-zsh-hook preexec __bt_preexec
     add-zsh-hook precmd __bt_precmd
@@ -48,10 +50,11 @@ public enum ShellIntegration {
     if [ -f "$HOME/.bash_profile" ]; then . "$HOME/.bash_profile"; elif [ -f "$HOME/.bashrc" ]; then . "$HOME/.bashrc"; fi
     [ -n "$BT_START_DIR" ] && [ -d "$BT_START_DIR" ] && cd "$BT_START_DIR"
     __bt_b64() { printf %s "$1" | base64 | tr -d '\n'; }
+    __bt_emit() { [ -n "$BT_EVENT_FILE" ] && printf '%s\t%s\n' "$1" "$2" >> "$BT_EVENT_FILE"; }
     __bt_precmd() {
       local c=$?
-      printf '\033]133;D;%s\007' "$c"
-      printf '\033]7779;%s\007' "$(__bt_b64 "$PWD")"
+      __bt_emit D "$c"
+      __bt_emit C "$(__bt_b64 "$PWD")"
       return $c
     }
     __bt_arm() { __bt_ready=1; }
@@ -61,7 +64,7 @@ public enum ShellIntegration {
       __bt_ready=
       local line
       line="$(HISTTIMEFORMAT= history 1 | sed 's/^ *[0-9]* *//')"
-      printf '\033]7777;%s\007' "$(__bt_b64 "${line:-$BASH_COMMAND}")"
+      __bt_emit S "$(__bt_b64 "${line:-$BASH_COMMAND}")"
     }
     trap '__bt_debug' DEBUG
     PROMPT_COMMAND="__bt_precmd${PROMPT_COMMAND:+;$PROMPT_COMMAND};__bt_arm"
@@ -70,15 +73,18 @@ public enum ShellIntegration {
     static let fish = #"""
     # Better-Terminal shell integration (fish)
     if test -n "$BT_START_DIR"; and test -d "$BT_START_DIR"; cd "$BT_START_DIR"; end
+    function __bt_emit
+      test -n "$BT_EVENT_FILE"; and printf '%s\t%s\n' $argv[1] $argv[2] >> "$BT_EVENT_FILE"
+    end
     function __bt_preexec --on-event fish_preexec
-      printf '\033]7777;%s\007' (printf %s "$argv[1]" | base64 | tr -d '\n')
+      __bt_emit S (printf %s "$argv[1]" | base64 | tr -d '\n')
     end
     function __bt_postexec --on-event fish_postexec
       set -l c $status
-      printf '\033]133;D;%s\007' $c
+      __bt_emit D $c
     end
     function __bt_prompt --on-event fish_prompt
-      printf '\033]7779;%s\007' (printf %s "$PWD" | base64 | tr -d '\n')
+      __bt_emit C (printf %s "$PWD" | base64 | tr -d '\n')
     end
     """#
 
@@ -97,12 +103,13 @@ public enum ShellIntegration {
 
     public struct LaunchSpec: Sendable { public var args: [String]; public var env: [String: String] }
 
-    public static func launchSpec(shell: String, cwd: String, baseEnv: [String: String], integrationDir: URL) -> LaunchSpec {
+    public static func launchSpec(shell: String, cwd: String, baseEnv: [String: String], integrationDir: URL, eventFile: String = "") -> LaunchSpec {
         var env = baseEnv
         env["TERM"] = "xterm-256color"
         env["COLORTERM"] = "truecolor"
         env["TERM_PROGRAM"] = "BetterTerminal"
         env["BT_START_DIR"] = cwd
+        env["BT_EVENT_FILE"] = eventFile
         switch kind(forShellPath: shell) {
         case .zsh:
             env["BT_USER_ZDOTDIR"] = baseEnv["ZDOTDIR"] ?? baseEnv["HOME"] ?? NSHomeDirectory()
@@ -132,6 +139,25 @@ public enum ShellIntegration {
     public static func parseExit(_ s: String) -> Int32? {
         let part = s.split(separator: ";").last.map(String.init) ?? s
         return Int32(part.trimmingCharacters(in: .whitespaces))
+    }
+}
+
+/// One line of the event file.
+public enum ShellEvent: Equatable, Sendable {
+    case commandStarted(String)
+    case commandFinished(Int32?)
+    case cwd(String)
+
+    public static func parse(_ line: String) -> ShellEvent? {
+        let parts = line.split(separator: "\t", maxSplits: 1, omittingEmptySubsequences: false)
+        guard parts.count == 2 else { return nil }
+        let payload = String(parts[1])
+        switch parts[0] {
+        case "S": return ShellIntegration.decodeBase64(payload).map(ShellEvent.commandStarted)
+        case "D": return .commandFinished(Int32(payload.trimmingCharacters(in: .whitespaces)))
+        case "C": return ShellIntegration.decodeBase64(payload).map(ShellEvent.cwd)
+        default: return nil
+        }
     }
 }
 

@@ -14,6 +14,50 @@ protocol TerminalSession: AnyObject {
     func terminate()
 }
 
+/// Follows an append-only file and reports each complete new line (on the main queue).
+final class EventFileTailer {
+    private let url: URL
+    private let onLine: (String) -> Void
+    private var source: DispatchSourceFileSystemObject?
+    private var offset: UInt64 = 0
+    private var partial = Data()
+
+    init(url: URL, onLine: @escaping (String) -> Void) {
+        self.url = url
+        self.onLine = onLine
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        FileManager.default.createFile(atPath: url.path, contents: nil)   // truncates stale events
+        let fd = open(url.path, O_EVTONLY)
+        guard fd >= 0 else { return }
+        let src = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd, eventMask: [.write, .extend], queue: .main)
+        src.setEventHandler { [weak self] in self?.drain() }
+        src.setCancelHandler { close(fd) }
+        src.resume()
+        source = src
+    }
+
+    private func drain() {
+        guard let h = try? FileHandle(forReadingFrom: url) else { return }
+        defer { try? h.close() }
+        try? h.seek(toOffset: offset)
+        guard let data = try? h.readToEnd(), !data.isEmpty else { return }
+        offset += UInt64(data.count)
+        partial.append(data)
+        while let nl = partial.firstIndex(of: 0x0A) {
+            let line = String(decoding: partial[partial.startIndex..<nl], as: UTF8.self)
+            partial.removeSubrange(partial.startIndex...nl)
+            onLine(line)
+        }
+    }
+
+    func stop() {
+        source?.cancel(); source = nil
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    deinit { source?.cancel() }
+}
+
 final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalViewDelegate {
     struct Callbacks {
         var onCommand: @MainActor (HistoryEntry) -> Void
@@ -25,15 +69,19 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
 
     private let view = LocalProcessTerminalView(frame: .zero)
     private var clickMonitor: Any?
+    private var tailer: EventFileTailer?
     private var tracker: CommandTracker
     private let callbacks: Callbacks
+    private let shellKind: ShellIntegration.Kind
     var nsView: NSView { view }
 
-    init(tab: TerminalTab, integrationDir: URL, callbacks: Callbacks) {
+    init(tab: TerminalTab, integrationDir: URL, eventFile: URL, callbacks: Callbacks) {
         self.tracker = CommandTracker(cwd: tab.cwd)
         self.callbacks = callbacks
+        self.shellKind = ShellIntegration.kind(forShellPath: tab.shell)
         super.init()
         view.processDelegate = self
+
         // LocalProcessTerminalView's responder methods are not `open`, so detect focus via clicks.
         clickMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
             if let v = self?.view, let w = v.window, event.window === w,
@@ -42,47 +90,46 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
             }
             return event
         }
-        installOscHandlers()
+
+        tailer = EventFileTailer(url: eventFile) { [weak self] line in self?.handle(line) }
 
         try? ShellIntegration.install(into: integrationDir)
         let spec = ShellIntegration.launchSpec(shell: tab.shell, cwd: tab.cwd,
                                                baseEnv: ProcessInfo.processInfo.environment,
-                                               integrationDir: integrationDir)
+                                               integrationDir: integrationDir,
+                                               eventFile: eventFile.path)
         let envArray = spec.env.map { "\($0.key)=\($0.value)" }
         view.startProcess(executable: tab.shell, args: spec.args, environment: envArray, execName: nil)
     }
 
-    private func installOscHandlers() {
-        let term = view.terminal
-        term.registerOscHandler(code: 7777) { [weak self] data in
-            guard let self, let cmd = ShellIntegration.decodeBase64(String(decoding: data, as: UTF8.self)) else { return }
-            self.tracker.commandStarted(cmd)
-        }
-        term.registerOscHandler(code: 133) { [weak self] data in
-            guard let self else { return }
-            let s = String(decoding: data, as: UTF8.self)
-            guard s.hasPrefix("D") else { return }
-            let code = ShellIntegration.parseExit(s)
-            if let entry = self.tracker.commandFinished(exitCode: code) {
-                Task { @MainActor in self.callbacks.onCommand(entry) }
+    private func handle(_ line: String) {
+        switch ShellEvent.parse(line) {
+        case .commandStarted(let cmd)?:
+            tracker.commandStarted(cmd)
+        case .commandFinished(let code)?:
+            if let entry = tracker.commandFinished(exitCode: code) {
+                Task { @MainActor in callbacks.onCommand(entry) }
             }
-        }
-        term.registerOscHandler(code: 7779) { [weak self] data in
-            guard let self, let cwd = ShellIntegration.decodeBase64(String(decoding: data, as: UTF8.self)) else { return }
-            self.tracker.cwd = cwd
-            Task { @MainActor in self.callbacks.onCwd(cwd) }
+        case .cwd(let cwd)?:
+            tracker.cwd = cwd
+            Task { @MainActor in callbacks.onCwd(cwd) }
+        case nil:
+            break
         }
     }
+
+    // zsh and fish enable bracketed paste by default; bash 3.2 (macOS) does not.
+    private var bracketedPaste: Bool { shellKind == .zsh || shellKind == .fish }
 
     // MARK: TerminalSession
     func focus() { view.window?.makeFirstResponder(view) }
 
     func insert(_ text: String) {
-        view.send(txt: PromptInput.insertPayload(text, bracketedPaste: view.terminal.bracketedPasteMode))
+        view.send(txt: PromptInput.insertPayload(text, bracketedPaste: bracketedPaste))
     }
 
     func run(_ text: String) {
-        view.send(txt: PromptInput.runPayload(text, bracketedPaste: view.terminal.bracketedPasteMode))
+        view.send(txt: PromptInput.runPayload(text, bracketedPaste: bracketedPaste))
     }
 
     func apply(theme: Theme, scheme: ColorScheme, fontSize: Double) {
@@ -94,7 +141,8 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
 
     func terminate() {
         if let m = clickMonitor { NSEvent.removeMonitor(m); clickMonitor = nil }
-        view.process.terminate()
+        tailer?.stop(); tailer = nil
+        view.terminate()
     }
 
     deinit { if let m = clickMonitor { NSEvent.removeMonitor(m) } }
