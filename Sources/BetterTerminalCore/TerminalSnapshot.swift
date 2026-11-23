@@ -31,7 +31,7 @@ public enum TerminalText {
         guard !baseline.isEmpty else { return text }
         if text == baseline { return "" }
         if text.hasPrefix(baseline) {
-            return prepare(String(text.dropFirst(baseline.count)).trimmingCharacters(in: .newlines))
+            return prepare(String(text.dropFirst(baseline.count)).trimmingCharacters(in: .whitespacesAndNewlines))
         }
         return text
     }
