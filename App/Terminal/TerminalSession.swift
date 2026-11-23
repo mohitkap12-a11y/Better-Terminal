@@ -53,7 +53,7 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
     }
 
     private func installOscHandlers() {
-        let term = view.getTerminal()
+        let term = view.terminal
         term.registerOscHandler(code: 7777) { [weak self] data in
             guard let self, let cmd = ShellIntegration.decodeBase64(String(decoding: data, as: UTF8.self)) else { return }
             self.tracker.commandStarted(cmd)
@@ -78,11 +78,11 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
     func focus() { view.window?.makeFirstResponder(view) }
 
     func insert(_ text: String) {
-        view.send(txt: PromptInput.insertPayload(text, bracketedPaste: view.getTerminal().bracketedPasteMode))
+        view.send(txt: PromptInput.insertPayload(text, bracketedPaste: view.terminal.bracketedPasteMode))
     }
 
     func run(_ text: String) {
-        view.send(txt: PromptInput.runPayload(text, bracketedPaste: view.getTerminal().bracketedPasteMode))
+        view.send(txt: PromptInput.runPayload(text, bracketedPaste: view.terminal.bracketedPasteMode))
     }
 
     func apply(theme: Theme, scheme: ColorScheme, fontSize: Double) {
