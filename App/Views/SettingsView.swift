@@ -172,6 +172,7 @@ private struct ShortcutsSection: View {
 
 private struct AboutSection: View {
     @Environment(\.theme) private var theme
+    @Environment(AppModel.self) private var model
 
     var body: some View {
         SettingsSection(title: "About", subtitle: "Open source") {
@@ -187,6 +188,9 @@ private struct AboutSection: View {
                 }
             }
             .padding(.vertical, 6)
+            SettingsRow(title: "Walkthrough", subtitle: "Replay the quick tour") {
+                PillButton(title: "Show Walkthrough") { model.route = .terminal; model.walkthroughOpen = true }
+            }
         }
     }
 }

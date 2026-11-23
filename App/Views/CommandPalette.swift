@@ -27,6 +27,7 @@ struct CommandPalette: View {
         add("New Workspace", "⇧⌘N", "rectangle.stack.badge.plus") { model.addWorkspace() }
         add("Show Command History", "⇧⌘H", "clock.arrow.circlepath") { model.toggleHistory() }
         add("Settings", "⌘,", "gearshape") { model.route = .settings }
+        add("Show Walkthrough", "", "sparkles") { model.walkthroughOpen = true }
         for (i, ws) in model.state.workspaces.enumerated() {
             add("Switch to \(ws.name)", "⌃⌘\(i + 1)", "rectangle.stack") { model.selectWorkspace(at: i) }
         }

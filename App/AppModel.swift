@@ -16,6 +16,7 @@ final class AppModel {
     // UI triggers (keyboard shortcuts)
     var route: AppRoute = .terminal
     var paletteOpen = false
+    var walkthroughOpen = false
     var layoutPickerOpen = false
     var historyOpenTab: UUID?
     /// Bumped when a shell exits and is relaunched, so views rebuild.

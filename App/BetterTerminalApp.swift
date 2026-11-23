@@ -4,6 +4,8 @@ import BetterTerminalCore
 @main
 struct BetterTerminalApp: App {
     @State private var model = AppModel()
+
+    init() { AppIcon.install() }
     @StateObject private var updater = UpdaterService()
 
     var body: some Scene {

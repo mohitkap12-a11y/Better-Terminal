@@ -4,7 +4,8 @@ import BetterTerminalCore
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
-    @AppStorage(SidebarState.storageKey) private var sidebarCollapsed = false
+    @AppStorage(SidebarState.storageKey) private var sidebarCollapsed = true
+    @AppStorage("walkthroughSeen") private var walkthroughSeen = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -27,6 +28,14 @@ struct RootView: View {
         }
         .ignoresSafeArea(.container, edges: .top)
         .sheet(isPresented: Bindable(model).paletteOpen) { CommandPalette() }
+        .overlay {
+            if model.walkthroughOpen {
+                Walkthrough { walkthroughSeen = true; model.walkthroughOpen = false }
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: model.walkthroughOpen)
+        .onAppear { if !walkthroughSeen { model.walkthroughOpen = true } }
     }
 }
 

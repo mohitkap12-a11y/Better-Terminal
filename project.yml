@@ -16,7 +16,10 @@ targets:
   BetterTerminal:
     type: application
     platform: macOS
-    sources: [App]
+    sources:
+      - App
+      - path: Resources/AppIcon.png
+        buildPhase: resources
     dependencies:
       - package: BetterTerminal
         product: BetterTerminalCore
