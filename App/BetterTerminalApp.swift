@@ -26,6 +26,15 @@ struct BetterTerminalApp: App {
                     if let id = model.active?.activeTabID { model.closeTab(id) }
                 }.keyboardShortcut("w")
             }
+            CommandMenu("View") {
+                Button("Command Palette") { model.paletteOpen = true }.keyboardShortcut("k")
+                Button("Pane Layout") { model.layoutPickerOpen.toggle() }.keyboardShortcut("l", modifiers: [.command, .option])
+                Button("Command History") { model.toggleHistory() }.keyboardShortcut("h", modifiers: [.command, .shift])
+                Button("Bigger Text") { model.state.terminalFontSize = min(32, model.state.terminalFontSize + 1) }
+                    .keyboardShortcut("+")
+                Button("Smaller Text") { model.state.terminalFontSize = max(9, model.state.terminalFontSize - 1) }
+                    .keyboardShortcut("-")
+            }
             CommandMenu("Workspace") {
                 ForEach(0..<9, id: \.self) { i in
                     Button("Workspace \(i + 1)") { model.selectWorkspace(at: i) }

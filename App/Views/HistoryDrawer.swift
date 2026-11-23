@@ -38,6 +38,13 @@ struct HistoryDrawer: View {
                         .onTapGesture(count: 2) { onPick(e.command, true) }
                         .onTapGesture { onPick(e.command, NSEvent.modifierFlags.contains(.command)) }
                         .listRowSeparator(.hidden)
+                        .contextMenu {
+                            Button("Run again") { onPick(e.command, true) }
+                            Button("Insert at prompt") { onPick(e.command, false) }
+                            Divider()
+                            Button("Copy command") { copy(e.command) }
+                            Button("Copy directory") { copy(e.cwd) }
+                        }
                 }
                 .listStyle(.plain)
                 .frame(height: 320)
@@ -45,6 +52,11 @@ struct HistoryDrawer: View {
         }
         .frame(width: 360)
         .task(id: query) { entries = model.store.history(tab: tab.id, limit: 500, matching: query) }
+    }
+
+    private func copy(_ s: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(s, forType: .string)
     }
 
     private struct Row: View {
@@ -56,8 +68,8 @@ struct HistoryDrawer: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(entry.command).font(.system(.callout, design: .monospaced))
                         .lineLimit(1).truncationMode(.middle)
-                    Text(entry.startedAt, format: .relative(presentation: .named))
-                        .font(.caption2).foregroundStyle(.secondary)
+                    Text(entry.cwd.replacingOccurrences(of: NSHomeDirectory(), with: "~") + " · " + entry.startedAt.formatted(.relative(presentation: .named)))
+                        .font(.caption2).foregroundStyle(.secondary).lineLimit(1).truncationMode(.head)
                 }
                 Spacer()
                 if let d = entry.duration {

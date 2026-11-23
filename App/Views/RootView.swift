@@ -18,6 +18,7 @@ struct RootView: View {
         }
         .background(.background)
         .ignoresSafeArea(.container, edges: .top)
+        .sheet(isPresented: Bindable(model).paletteOpen) { CommandPalette() }
     }
 }
 

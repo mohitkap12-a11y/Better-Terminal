@@ -19,11 +19,19 @@ macOS 14+, native Swift. Bundle ID `com.better.terminal`. Distribution: notarize
 ## Layout model
 Layout is per workspace (`PaneLayout` rows x columns). New tabs/panes fill row-major and follow it; overflow adds rows.
 
+## Terminal engine
+`TerminalSession` protocol (App/Terminal) hides the backend. **Shipping backend: SwiftTerm** (stable, documented API, written without a Mac to compile against).
+libghostty remains the target: its embedding API is unstable upstream, so swap it in behind the same protocol once pinned and verified on a Mac.
+
+## Shell integration
+zsh/bash/fish hook scripts (Core `ShellIntegration`) are written to `Application Support/BetterTerminal/shell-integration` and loaded via ZDOTDIR / `--rcfile` / `--init-command`. They emit private OSC sequences (command, exit code, cwd) -> `CommandTracker` -> `HistoryEntry`. User rc files are sourced first.
+
 ## Roadmap
 1. [x] Core models, persistence, tests, CI
-2. [x] Xcode app shell (XcodeGen `project.yml`, `App/`): window, workspace rail, tab bar, layout picker, history drawer, themes, settings. Temporary Process-based pane until engine lands
-3. [ ] TerminalEngine + libghostty, PTY, shell integration scripts
-4. [ ] Layout picker + panes grid
-5. [ ] History drawer (per tab) + restore on launch
-6. [ ] Command blocks, palette (Cmd-K), AI (local/Claude optional)
-7. [ ] Signing, notarization, Homebrew cask
+2. [x] App shell: window, workspace rail, tab bar, themes, settings
+3. [x] Terminal engine (SwiftTerm), PTY, shell integration
+4. [x] Layout picker + pane grid
+5. [x] History drawer (per tab) + restore on launch
+6. [x] Command palette (⌘K), history actions, optional AI (Claude / Ollama)
+7. [x] Release tooling: sign, notarize, DMG, Homebrew cask (untested)
+8. [ ] libghostty backend, inline images, plugin API, command-block output capture

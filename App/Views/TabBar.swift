@@ -4,7 +4,6 @@ import BetterTerminalCore
 struct TabBar: View {
     @Environment(AppModel.self) private var model
     let workspace: Workspace
-    @State private var showLayout = false
 
     var body: some View {
         HStack(spacing: Metrics.s1) {
@@ -21,7 +20,7 @@ struct TabBar: View {
                 .accessibilityLabel("New tab")
                 .help("New tab (⌘T)")
             Spacer(minLength: Metrics.s2)
-            Button { showLayout.toggle() } label: {
+            Button { model.layoutPickerOpen.toggle() } label: {
                 HStack(spacing: Metrics.s1) {
                     Image(systemName: "square.grid.2x2")
                     Text(workspace.layout.label).monospacedDigit()
@@ -30,8 +29,8 @@ struct TabBar: View {
             .buttonStyle(.bordered)
             .controlSize(.small)
             .accessibilityLabel("Pane layout, \(workspace.layout.label)")
-            .help("Pane layout")
-            .popover(isPresented: $showLayout, arrowEdge: .bottom) { LayoutPicker(isPresented: $showLayout) }
+            .help("Pane layout (⌥⌘L)")
+            .popover(isPresented: Bindable(model).layoutPickerOpen, arrowEdge: .bottom) { LayoutPicker(isPresented: Bindable(model).layoutPickerOpen) }
         }
         .padding(.horizontal, Metrics.s3)
         .padding(.top, Metrics.s2)

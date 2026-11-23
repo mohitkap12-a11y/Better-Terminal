@@ -17,7 +17,7 @@ struct PaneGrid: View {
                         if i < workspace.tabs.count {
                             PaneView(tab: workspace.tabs[i],
                                      focused: workspace.tabs[i].id == workspace.activeTabID)
-                                .id(workspace.tabs[i].id)
+                                .id("\(workspace.tabs[i].id)-\(model.restartCounter)")
                         } else {
                             EmptyPane()
                         }

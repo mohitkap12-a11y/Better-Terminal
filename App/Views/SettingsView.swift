@@ -15,6 +15,12 @@ struct SettingsView: View {
                 }
                 .pickerStyle(.segmented)
 
+                Section("Terminal") {
+                    Stepper("Font size: \(Int(model.state.terminalFontSize)) pt",
+                            value: $model.state.terminalFontSize, in: 9...32, step: 1)
+                        .monospacedDigit()
+                }
+
                 Section("Color theme") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Metrics.s3), count: 3),
                               spacing: Metrics.s3) {
@@ -39,8 +45,10 @@ struct SettingsView: View {
             }
             .formStyle(.grouped)
             .tabItem { Label("General", systemImage: "gearshape") }
+            AISettings()
+                .tabItem { Label("AI", systemImage: "sparkles") }
         }
-        .frame(width: 520, height: 420)
+        .frame(width: 520, height: 460)
     }
 }
 
@@ -70,5 +78,37 @@ private struct ThemeSwatch: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+    }
+}
+
+private struct AISettings: View {
+    @Environment(AppModel.self) private var model
+    @State private var key = ""
+    @State private var saved = false
+
+    var body: some View {
+        @Bindable var model = model
+        Form {
+            Section {
+                Picker("Provider", selection: $model.state.aiProvider) {
+                    Text("Anthropic (Claude)").tag("anthropic")
+                    Text("Ollama (local, private)").tag("ollama")
+                }
+                TextField("Model", text: $model.state.aiModel,
+                          prompt: Text(AIClient.defaultModel(for: model.state.aiProvider)))
+                if model.state.aiProvider == "anthropic" {
+                    SecureField("API key", text: $key, prompt: Text(Keychain.get(account: AIClient.keychainAccount) == nil ? "sk-ant-…" : "Saved in Keychain"))
+                    HStack {
+                        Button("Save key") { Keychain.set(key, account: AIClient.keychainAccount); key = ""; saved = true }
+                            .disabled(key.isEmpty)
+                        Button("Remove key", role: .destructive) { Keychain.set("", account: AIClient.keychainAccount); saved = false }
+                        if saved { Text("Saved").foregroundStyle(.secondary).font(.caption) }
+                    }
+                }
+            } footer: {
+                Text("AI is off until configured. Only the text you type in the palette (or the one failed command you ask about, with its exit code and directory) is sent. Your key stays in the macOS Keychain. Choose Ollama to keep everything on this Mac.")
+            }
+        }
+        .formStyle(.grouped)
     }
 }

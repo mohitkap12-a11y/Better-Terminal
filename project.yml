@@ -6,6 +6,9 @@ options:
 packages:
   BetterTerminal:
     path: .
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm
+    from: 1.2.0
 targets:
   BetterTerminal:
     type: application
@@ -14,6 +17,7 @@ targets:
     dependencies:
       - package: BetterTerminal
         product: BetterTerminalCore
+      - package: SwiftTerm
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.better.terminal

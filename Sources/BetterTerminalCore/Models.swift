@@ -65,15 +65,31 @@ public struct Workspace: Codable, Hashable, Sendable, Identifiable {
 public enum ThemeMode: String, Codable, Sendable, CaseIterable { case system, light, dark }
 
 public struct AppState: Codable, Sendable {
-    public var version: Int = 1
+    public var version: Int = 2
     public var workspaces: [Workspace]
     public var activeWorkspaceID: UUID?
     public var themeMode: ThemeMode = .system
     public var themeID: String = "default"
+    public var terminalFontSize: Double = 13
+    public var aiProvider: String = "anthropic"   // "anthropic" | "ollama"
+    public var aiModel: String = ""               // empty = provider default
 
     public init(workspaces: [Workspace] = [], activeWorkspaceID: UUID? = nil) {
         self.workspaces = workspaces
         self.activeWorkspaceID = activeWorkspaceID ?? workspaces.first?.id
+    }
+
+    // Tolerant decoding: older state files lacking new keys still load.
+    public init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: CodingKeys.self)
+        version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 1
+        workspaces = try c.decode([Workspace].self, forKey: .workspaces)
+        activeWorkspaceID = try c.decodeIfPresent(UUID.self, forKey: .activeWorkspaceID) ?? workspaces.first?.id
+        themeMode = try c.decodeIfPresent(ThemeMode.self, forKey: .themeMode) ?? .system
+        themeID = try c.decodeIfPresent(String.self, forKey: .themeID) ?? "default"
+        terminalFontSize = try c.decodeIfPresent(Double.self, forKey: .terminalFontSize) ?? 13
+        aiProvider = try c.decodeIfPresent(String.self, forKey: .aiProvider) ?? "anthropic"
+        aiModel = try c.decodeIfPresent(String.self, forKey: .aiModel) ?? ""
     }
 
     public static func fresh() -> AppState {

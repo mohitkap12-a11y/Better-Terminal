@@ -7,6 +7,15 @@ final class AppModel {
     var state: AppState { didSet { scheduleSave() } }
     @ObservationIgnored let store: WorkspaceStore
     @ObservationIgnored private var saveTask: Task<Void, Never>?
+    @ObservationIgnored private var sessions: [UUID: TerminalSession] = [:]
+    @ObservationIgnored private let integrationDir: URL
+
+    // UI triggers (keyboard shortcuts)
+    var paletteOpen = false
+    var layoutPickerOpen = false
+    var historyOpenTab: UUID?
+    /// Bumped when a shell exits and is relaunched, so views rebuild.
+    var restartCounter = 0
 
     init() {
         let store: WorkspaceStore
@@ -18,6 +27,7 @@ final class AppModel {
                 .appendingPathComponent("BetterTerminal-\(UUID().uuidString)"))
         }
         self.store = store
+        self.integrationDir = store.directory.appendingPathComponent("shell-integration", isDirectory: true)
         self.state = store.loadState()
     }
 
@@ -47,7 +57,10 @@ final class AppModel {
     func deleteWorkspace(_ id: UUID) {
         guard state.workspaces.count > 1,
               let i = state.workspaces.firstIndex(where: { $0.id == id }) else { return }
-        state.workspaces[i].tabs.forEach { store.deleteHistory(tab: $0.id) }
+        state.workspaces[i].tabs.forEach {
+            sessions[$0.id]?.terminate(); sessions[$0.id] = nil
+            store.deleteHistory(tab: $0.id)
+        }
         state.workspaces.remove(at: i)
         if state.activeWorkspaceID == id { state.activeWorkspaceID = state.workspaces[max(0, i - 1)].id }
     }
@@ -77,17 +90,70 @@ final class AppModel {
             guard ws.tabs.count > 1 else { return }
             ws.closeTab(id)
         }
+        sessions[id]?.terminate(); sessions[id] = nil
         store.deleteHistory(tab: id)
     }
 
     func setLayout(_ layout: PaneLayout) { mutateActive { $0.layout = layout } }
 
+    // MARK: Terminal sessions
+    func session(for tab: TerminalTab) -> TerminalSession {
+        if let s = sessions[tab.id] { return s }
+        let id = tab.id
+        let s = SwiftTermSession(tab: tab, integrationDir: integrationDir, callbacks: .init(
+            onCommand: { [weak self] in self?.record($0, tab: id) },
+            onCwd: { [weak self] in self?.updateCwd(tab: id, to: $0) },
+            onTitle: { [weak self] in self?.setTitle(tab: id, $0) },
+            onExit: { [weak self] _ in self?.restart(tab: id) },
+            onFocus: { [weak self] in self?.focusTab(id) }))
+        sessions[id] = s
+        return s
+    }
+
+    func activeSession() -> TerminalSession? {
+        guard let ws = active, let id = ws.activeTabID, let tab = ws.tabs.first(where: { $0.id == id }) else { return nil }
+        return session(for: tab)
+    }
+
+    private func restart(tab id: UUID) {
+        sessions[id] = nil
+        guard state.workspaces.contains(where: { $0.tabs.contains { $0.id == id } }) else { return }
+        restartCounter += 1
+    }
+
+    private func focusTab(_ id: UUID) {
+        guard let wi = state.workspaces.firstIndex(where: { $0.tabs.contains { $0.id == id } }),
+              state.workspaces[wi].activeTabID != id else { return }
+        state.workspaces[wi].activeTabID = id
+    }
+
+    private func setTitle(tab id: UUID, _ title: String) {
+        for wi in state.workspaces.indices {
+            if let ti = state.workspaces[wi].tabs.firstIndex(where: { $0.id == id }),
+               state.workspaces[wi].tabs[ti].title != title, !title.isEmpty {
+                state.workspaces[wi].tabs[ti].title = title
+            }
+        }
+    }
+
+    func toggleHistory() { historyOpenTab = historyOpenTab == nil ? active?.activeTabID : nil }
+
+    /// Most recent commands across the active workspace (for the palette).
+    func recentHistory(limit: Int = 40) -> [HistoryEntry] {
+        guard let ws = active else { return [] }
+        return ws.tabs.flatMap { store.history(tab: $0.id, limit: limit) }
+            .sorted { $0.startedAt > $1.startedAt }.prefix(limit).map { $0 }
+    }
+
     // MARK: History
     func record(_ entry: HistoryEntry, tab: UUID) { try? store.append(entry, tab: tab) }
 
-    func updateCwd(tab: UUID, to cwd: String) {
-        mutateActive { ws in
-            if let i = ws.tabs.firstIndex(where: { $0.id == tab }) { ws.tabs[i].cwd = cwd }
+    func updateCwd(tab id: UUID, to cwd: String) {
+        for wi in state.workspaces.indices {
+            if let ti = state.workspaces[wi].tabs.firstIndex(where: { $0.id == id }),
+               state.workspaces[wi].tabs[ti].cwd != cwd {
+                state.workspaces[wi].tabs[ti].cwd = cwd
+            }
         }
     }
 
