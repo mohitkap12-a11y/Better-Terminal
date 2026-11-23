@@ -14,7 +14,6 @@ struct BetterTerminalApp: App {
                 .environment(model)
                 .environmentObject(updater)
                 .environment(\.theme, model.theme)
-                .preferredColorScheme(model.colorScheme)
                 .tint(model.theme.accent)
                 .frame(minWidth: 860, minHeight: 520)
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in

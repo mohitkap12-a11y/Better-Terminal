@@ -122,10 +122,12 @@ private struct UpdatesSection: View {
                 Toggle("", isOn: $updater.automaticallyDownloads).labelsHidden().toggleStyle(.switch)
                     .disabled(!updater.isAvailable || !updater.automaticallyChecks)
             }
-            if updater.receivesPreviewBuilds {
-                SettingsRow(title: "Preview builds", subtitle: "You receive preview versions before they are released") {
-                    PillButton(title: "Back to stable") { updater.stopPreviewBuilds() }
-                }
+            SettingsRow(title: "Update channel",
+                        subtitle: updater.channel == .beta
+                            ? "Beta gets new features first and may be less stable. Switching back keeps the installed beta until the next stable release."
+                            : "Stable gets tested releases only") {
+                ChoiceChips(values: UpdateChannel.allCases, selection: $updater.channel) { $0.title }
+                    .disabled(!updater.isAvailable)
             }
         }
     }

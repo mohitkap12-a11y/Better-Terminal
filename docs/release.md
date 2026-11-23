@@ -9,7 +9,7 @@ MacPeek's, and you can reuse the same Apple signing keys and Sparkle key pair.
 ```bash
 # 1. Add docs/release-notes/vX.Y.Z.md (shown in the update window), merge to main.
 
-# Preview for opted-in Macs only (published to appcast-beta.xml, never to appcast.xml).
+# Beta channel (published to appcast-beta.xml only, never to appcast.xml).
 git tag v0.2.0-beta.1 && git push origin v0.2.0-beta.1
 
 # Optional dry run (GitHub pre-release only; no feed touched).
@@ -62,10 +62,15 @@ local Xcode build) the updater is off and Settings → Updates says so.
 
 ## Preview builds (beta)
 
+Users choose the channel in **Settings → Updates → Update channel** (Stable is the default; Beta reads
+`appcast-beta.xml`). Under the hood it is a `receivePreviewBuilds` default, so this also works:
+
 ```bash
-defaults write com.better.terminal receivePreviewBuilds -bool YES     # opt in
-defaults delete com.better.terminal receivePreviewBuilds              # back to stable
+defaults write com.better.terminal receivePreviewBuilds -bool YES     # Beta
+defaults delete com.better.terminal receivePreviewBuilds              # Stable
 ```
+
+A Mac on Beta also receives stable releases (every stable release refreshes the beta feed). Sparkle never downgrades.
 
 ## Local build
 

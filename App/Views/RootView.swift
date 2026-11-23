@@ -35,7 +35,11 @@ struct RootView: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: model.walkthroughOpen)
-        .onAppear { if !walkthroughSeen { model.walkthroughOpen = true } }
+        .onAppear {
+            model.applyAppearance()
+            if !walkthroughSeen { model.walkthroughOpen = true }
+        }
+        .onChange(of: model.state.themeMode) { model.applyAppearance() }
     }
 }
 

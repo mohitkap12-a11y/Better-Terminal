@@ -2,21 +2,29 @@ import AppKit
 import Combine
 import Sparkle
 
-/// In-app updates through Sparkle. The feed (`SUFeedURL`) is the newest GitHub release's `appcast.xml`, and every
+/// In-app updates through Sparkle. The stable feed (`SUFeedURL`) is the newest GitHub release's `appcast.xml`; every
 /// update archive is verified against the EdDSA public key in `SUPublicEDKey`.
+///
+/// Channels: **Stable** (default) or **Beta**, chosen in Settings → Updates. Beta reads `appcast-beta.xml` (a fixed
+/// pre-release, `BetterTerminalPreviewFeedURL`), which every beta and every stable release refreshes, so a Mac on Beta
+/// also gets stable releases. Sparkle never downgrades: switching back to Stable keeps the installed beta until the
+/// next stable release is newer.
 ///
 /// Sparkle only runs from a packaged release that carries a real public key. Local Xcode builds have none, so the
 /// updater stays off there and Settings says so instead of failing.
-///
-/// Preview builds: a Mac with the hidden `receivePreviewBuilds` default reads `appcast-beta.xml` instead.
-///
-///     defaults write com.better.terminal receivePreviewBuilds -bool YES     # opt in
-///     defaults delete com.better.terminal receivePreviewBuilds              # back to stable
+enum UpdateChannel: String, CaseIterable, Sendable {
+    case stable, beta
+    var title: String { self == .stable ? "Stable" : "Beta" }
+}
+
 @MainActor
 final class UpdaterService: NSObject, ObservableObject, SPUUpdaterDelegate {
+    /// UserDefaults flag behind the channel (also settable with `defaults write com.better.terminal receivePreviewBuilds -bool YES`).
     nonisolated static let previewBuildsKey = "receivePreviewBuilds"
 
-    @Published private(set) var receivesPreviewBuilds = UserDefaults.standard.bool(forKey: UpdaterService.previewBuildsKey)
+    @Published var channel: UpdateChannel = UserDefaults.standard.bool(forKey: UpdaterService.previewBuildsKey) ? .beta : .stable {
+        didSet { UserDefaults.standard.set(channel == .beta, forKey: Self.previewBuildsKey) }
+    }
 
     /// True when this build can check for updates (packaged app with a real `SUPublicEDKey`).
     let isAvailable: Bool
@@ -48,12 +56,6 @@ final class UpdaterService: NSObject, ObservableObject, SPUUpdaterDelegate {
     }
 
     func checkForUpdates() { controller?.checkForUpdates(nil) }
-
-    /// Leave the preview feed. Sparkle never downgrades, so the preview stays until a newer stable release.
-    func stopPreviewBuilds() {
-        UserDefaults.standard.removeObject(forKey: Self.previewBuildsKey)
-        receivesPreviewBuilds = false
-    }
 
     // MARK: SPUUpdaterDelegate
 

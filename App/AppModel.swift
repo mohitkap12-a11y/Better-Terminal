@@ -42,8 +42,14 @@ final class AppModel {
 
     // MARK: Derived
     var theme: Theme { Theme.named(state.themeID) }
-    var colorScheme: ColorScheme? {
-        switch state.themeMode { case .system: nil; case .light: .light; case .dark: .dark }
+    /// Applies System / Light / Dark to the whole app. `NSApp.appearance = nil` is what makes "System" follow macOS
+    /// again; SwiftUI's `preferredColorScheme(nil)` does not undo an earlier Light or Dark choice.
+    func applyAppearance() {
+        switch state.themeMode {
+        case .system: NSApp.appearance = nil
+        case .light: NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
+        }
     }
     var activeIndex: Int? { state.workspaces.firstIndex { $0.id == state.activeWorkspaceID } }
     var active: Workspace? { activeIndex.map { state.workspaces[$0] } }

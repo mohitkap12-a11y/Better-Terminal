@@ -13,7 +13,7 @@ on:
 #   v0.2.0         stable: GitHub release ("latest", so releases/latest/download/appcast.xml offers it to everyone);
 #                  its item also replaces the preview feed so opted-in Macs move on to it.
 #   v0.2.0-beta.1  preview: GitHub pre-release; appcast-beta.xml is replaced on the fixed `preview-feed` pre-release.
-#                  Only Macs opted in with `defaults write com.better.terminal receivePreviewBuilds -bool YES` read it.
+#                  Only Macs that chose "Beta" in Settings → Updates read it.
 #   v0.2.0-rc1     dry run (any other hyphenated tag): GitHub pre-release only; no feed is touched.
 permissions:
   contents: write
