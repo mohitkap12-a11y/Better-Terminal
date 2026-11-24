@@ -73,12 +73,15 @@ struct NoWindowDrag<Content: View>: NSViewRepresentable {
     }
 
     private var wrapped: AnyView {
-        AnyView(content.environment(model).environment(\.theme, theme).environment(\.colorScheme, scheme))
+        AnyView(content.environment(model).environment(\.theme, theme).environment(\.colorScheme, scheme)
+            .ignoresSafeArea())
     }
 
     func makeNSView(context: Context) -> Host {
         let host = Host(rootView: wrapped)
         host.sizingOptions = []
+        // The window's title-bar inset would push the tabs down by ~28pt a second time; the outer view already handles it.
+        host.safeAreaRegions = []
         return host
     }
 
