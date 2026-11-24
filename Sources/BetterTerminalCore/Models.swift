@@ -27,11 +27,14 @@ public struct TerminalTab: Codable, Hashable, Sendable, Identifiable {
     public var hasCustomTitle: Bool
     /// The latest title the shell set, kept while a custom name is shown so clearing the name can restore it.
     public var shellTitle: String
+    /// Typed into the shell once when the tab first opens (workspace templates). Cleared after it ran.
+    public var startupCommand: String?
 
     public init(id: UUID = UUID(), title: String = "Terminal",
-                cwd: String = NSHomeDirectory(), shell: String = "/bin/zsh", hasCustomTitle: Bool = false) {
+                cwd: String = NSHomeDirectory(), shell: String = "/bin/zsh", hasCustomTitle: Bool = false,
+                startupCommand: String? = nil) {
         self.id = id; self.title = title; self.cwd = cwd; self.shell = shell; self.hasCustomTitle = hasCustomTitle
-        self.shellTitle = title
+        self.shellTitle = title; self.startupCommand = startupCommand
     }
 
     // Tolerant decoding: state files written before renaming existed have no `hasCustomTitle`.
@@ -43,6 +46,7 @@ public struct TerminalTab: Codable, Hashable, Sendable, Identifiable {
         shell = try c.decode(String.self, forKey: .shell)
         hasCustomTitle = try c.decodeIfPresent(Bool.self, forKey: .hasCustomTitle) ?? false
         shellTitle = try c.decodeIfPresent(String.self, forKey: .shellTitle) ?? title
+        startupCommand = try c.decodeIfPresent(String.self, forKey: .startupCommand)
     }
 }
 
@@ -54,6 +58,20 @@ public struct Workspace: Codable, Hashable, Sendable, Identifiable {
     public var layout: PaneLayout
     public var tabs: [TerminalTab]
     public var activeTabID: UUID?
+    /// Typing in one pane is sent to every pane of this workspace.
+    public var broadcast: Bool = false
+
+    public init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        symbol = try c.decodeIfPresent(String.self, forKey: .symbol) ?? "terminal"
+        colorHex = try c.decodeIfPresent(String.self, forKey: .colorHex) ?? "#0A84FF"
+        layout = try c.decodeIfPresent(PaneLayout.self, forKey: .layout) ?? .single
+        tabs = try c.decode([TerminalTab].self, forKey: .tabs)
+        activeTabID = try c.decodeIfPresent(UUID.self, forKey: .activeTabID) ?? tabs.first?.id
+        broadcast = try c.decodeIfPresent(Bool.self, forKey: .broadcast) ?? false
+    }
 
     public init(id: UUID = UUID(), name: String, symbol: String = "terminal",
                 colorHex: String = "#0A84FF", layout: PaneLayout = .single,
@@ -71,10 +89,69 @@ public struct Workspace: Codable, Hashable, Sendable, Identifiable {
         return tab
     }
 
+    /// Adds a pane next to the active one (iTerm-style split): the new tab goes right after it and the layout
+    /// grows along `axis` so it has room. The new pane starts in the same folder.
+    @discardableResult
+    public mutating func split(_ axis: SplitAxis) -> TerminalTab {
+        let at = tabs.firstIndex { $0.id == activeTabID } ?? (tabs.count - 1)
+        let cwd = tabs.indices.contains(at) ? tabs[at].cwd : NSHomeDirectory()
+        let tab = TerminalTab(title: "Terminal \(tabs.count + 1)", cwd: cwd)
+        tabs.insert(tab, at: min(at + 1, tabs.count))
+        activeTabID = tab.id
+        layout = layout.growing(toFit: tabs.count, along: axis)
+        return tab
+    }
+
     public mutating func closeTab(_ id: UUID) {
         guard let i = tabs.firstIndex(where: { $0.id == id }) else { return }
         tabs.remove(at: i)
         if activeTabID == id { activeTabID = tabs.indices.contains(i) ? tabs[i].id : tabs.last?.id }
+    }
+}
+
+public enum SplitAxis: Sendable { case right, down }
+
+/// A saved workspace setup: layout plus the tabs to open (folder and an optional command each).
+public struct WorkspaceTemplate: Codable, Hashable, Sendable, Identifiable {
+    public struct Tab: Codable, Hashable, Sendable, Identifiable {
+        public var id: UUID = UUID()
+        public var title: String
+        public var cwd: String
+        public var command: String
+        public init(title: String = "Terminal", cwd: String = NSHomeDirectory(), command: String = "") {
+            self.title = title; self.cwd = cwd; self.command = command
+        }
+    }
+    public var id: UUID
+    public var name: String
+    public var layout: PaneLayout
+    public var tabs: [Tab]
+    public init(id: UUID = UUID(), name: String, layout: PaneLayout = .single, tabs: [Tab] = []) {
+        self.id = id; self.name = name; self.layout = layout; self.tabs = tabs
+    }
+}
+
+extension Workspace {
+    /// Captures this workspace as a template (folders only; commands are added by the user).
+    public func asTemplate(named name: String) -> WorkspaceTemplate {
+        WorkspaceTemplate(name: name, layout: layout,
+                          tabs: tabs.map { .init(title: $0.title, cwd: $0.cwd, command: "") })
+    }
+}
+
+extension WorkspaceTemplate {
+    /// A new workspace with one tab per template tab.
+    public func makeWorkspace(name: String? = nil, colorHex: String) -> Workspace {
+        var ws = Workspace(name: name ?? self.name, colorHex: colorHex, layout: layout)
+        for t in tabs {
+            let tab = TerminalTab(title: t.title.isEmpty ? "Terminal" : t.title, cwd: t.cwd,
+                                  hasCustomTitle: !t.title.isEmpty && t.title != "Terminal",
+                                  startupCommand: t.command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : t.command)
+            ws.tabs.append(tab)
+        }
+        if ws.tabs.isEmpty { ws.addTab() }
+        ws.activeTabID = ws.tabs.first?.id
+        return ws
     }
 }
 
@@ -91,6 +168,13 @@ public struct AppState: Codable, Sendable {
     public var restoreTerminalText: Bool = true
     /// Ask before closing a tab that is running a command.
     public var confirmCloseRunning: Bool = true
+    /// Notify when a command that ran this long (seconds) finishes while you are elsewhere.
+    public var notifyLongCommands: Bool = true
+    public var terminalFontFamily: String = ""
+    public var templates: [WorkspaceTemplate] = []
+    public var customThemes: [CustomTheme] = []
+    /// Global hotkey (⌃`) that drops a terminal down from the top of the screen.
+    public var quickTerminalEnabled: Bool = false
 
     public init(workspaces: [Workspace] = [], activeWorkspaceID: UUID? = nil) {
         self.workspaces = workspaces
@@ -108,6 +192,11 @@ public struct AppState: Codable, Sendable {
         terminalFontSize = try c.decodeIfPresent(Double.self, forKey: .terminalFontSize) ?? 13
         restoreTerminalText = try c.decodeIfPresent(Bool.self, forKey: .restoreTerminalText) ?? true
         confirmCloseRunning = try c.decodeIfPresent(Bool.self, forKey: .confirmCloseRunning) ?? true
+        notifyLongCommands = try c.decodeIfPresent(Bool.self, forKey: .notifyLongCommands) ?? true
+        terminalFontFamily = try c.decodeIfPresent(String.self, forKey: .terminalFontFamily) ?? ""
+        templates = try c.decodeIfPresent([WorkspaceTemplate].self, forKey: .templates) ?? []
+        customThemes = try c.decodeIfPresent([CustomTheme].self, forKey: .customThemes) ?? []
+        quickTerminalEnabled = try c.decodeIfPresent(Bool.self, forKey: .quickTerminalEnabled) ?? false
     }
 
     public static func fresh() -> AppState {
@@ -162,6 +251,20 @@ extension AppState {
         }
         workspaces[dstW].activeTabID = tab.id
         return true
+    }
+
+    /// Swaps the positions of two tabs in the same workspace (drag a pane onto another pane).
+    @discardableResult
+    public mutating func swapTabs(_ a: UUID, _ b: UUID) -> Bool {
+        guard a != b else { return false }
+        for w in workspaces.indices {
+            if let i = workspaces[w].tabs.firstIndex(where: { $0.id == a }),
+               let j = workspaces[w].tabs.firstIndex(where: { $0.id == b }) {
+                workspaces[w].tabs.swapAt(i, j)
+                return true
+            }
+        }
+        return false
     }
 
     /// Gives a tab a name of the user's choosing. An empty name goes back to the shell-provided title.

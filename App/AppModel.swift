@@ -1,6 +1,7 @@
 import SwiftUI
 import Observation
 import BetterTerminalCore
+import UserNotifications
 
 enum AppRoute: Hashable { case terminal, settings }
 
@@ -10,6 +11,8 @@ final class AppModel {
     @ObservationIgnored let store: WorkspaceStore
     @ObservationIgnored private var saveTask: Task<Void, Never>?
     @ObservationIgnored private var sessions: [UUID: TerminalSession] = [:]
+    /// Template commands waiting for their shell's first prompt.
+    @ObservationIgnored private var pendingStartup: [UUID: String] = [:]
     /// Terminal text that was on screen when the user pressed "Clear saved text": never saved again.
     @ObservationIgnored private var clearedBaseline: [UUID: String] = [:]
     @ObservationIgnored private let integrationDir: URL
@@ -25,6 +28,13 @@ final class AppModel {
     /// The pane that was just navigated to, for the highlight pulse. `flashID` changes on every move.
     var flashTab: UUID?
     var flashID = 0
+    /// Tabs with a command running now, and tabs whose last command failed while you were elsewhere.
+    var runningTabs: Set<UUID> = []
+    var failedTabs: Set<UUID> = []
+    /// Find bar (⌘F) for the active pane.
+    var findOpen = false
+    var findQuery = ""
+    var findMissed = false
     var layoutPickerOpen = false
     var historyOpenTab: UUID?
     /// Bumped when a shell exits and is relaunched, so views rebuild.
@@ -43,6 +53,14 @@ final class AppModel {
         self.integrationDir = store.directory.appendingPathComponent("shell-integration", isDirectory: true)
         self.eventsDir = store.directory.appendingPathComponent("events", isDirectory: true)
         self.state = store.loadState()
+        Theme.custom = state.customThemes.map(Theme.init(custom:))
+        if state.notifyLongCommands { Notifier.shared.requestAuthorization() }
+        Notifier.shared.onOpenTab = { [weak self] id in self?.select(tab: id); NSApp.activate(ignoringOtherApps: true) }
+        if state.quickTerminalEnabled { QuickTerminal.shared.start(model: self) }
+        if let i = CommandLine.arguments.firstIndex(of: "--smoke-test") {
+            let out = CommandLine.arguments.indices.contains(i + 1) ? CommandLine.arguments[i + 1] : "/tmp/bt-smoke.txt"
+            runSmokeTest(resultPath: out)
+        }
         // Keep the saved terminal text fresh in case of a crash or force quit.
         Task { [weak self] in
             while !Task.isCancelled {
@@ -159,6 +177,7 @@ final class AppModel {
         state.activeWorkspaceID = state.workspaces[wi].id
         state.workspaces[wi].activeTabID = id
         route = .terminal
+        failedTabs.remove(id)
     }
 
     func closeTab(_ id: UUID) {
@@ -167,6 +186,7 @@ final class AppModel {
         state.workspaces[wi].closeTab(id)
         sessions[id]?.terminate(); sessions[id] = nil
         clearedBaseline[id] = nil
+        runningTabs.remove(id); failedTabs.remove(id)
         store.deleteHistory(tab: id)
         store.deleteSnapshot(tab: id)
     }
@@ -239,8 +259,23 @@ final class AppModel {
             onCwd: { [weak self] in self?.updateCwd(tab: id, to: $0) },
             onTitle: { [weak self] in self?.setTitle(tab: id, $0) },
             onExit: { [weak self] _ in self?.restart(tab: id) },
-            onFocus: { [weak self] in self?.focusTab(id) }))
+            onFocus: { [weak self] in self?.focusTab(id) },
+            onRunning: { [weak self] running in self?.setRunning(running, tab: id) },
+            onReady: { [weak self] in self?.runStartupCommand(tab: id) }))
+        s.onInput = { [weak self] data in self?.mirror(data, from: id) }
         sessions[id] = s
+        if let cmd = tab.startupCommand, !cmd.isEmpty {
+            // Template tabs: wait for the shell's first prompt (so slow or interactive start-up files don't swallow
+            // the command). If no prompt signal ever arrives, give up after a while instead of typing blindly.
+            pendingStartup[id] = cmd
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(15))
+                if self?.pendingStartup.removeValue(forKey: id) != nil {
+                    Diagnostics.log("startup command skipped: shell never reported a prompt")
+                    self?.clearStartupCommand(tab: id)
+                }
+            }
+        }
         return s
     }
 
@@ -260,6 +295,7 @@ final class AppModel {
         guard let wi = state.workspaces.firstIndex(where: { $0.tabs.contains { $0.id == id } }),
               state.workspaces[wi].activeTabID != id else { return }
         state.workspaces[wi].activeTabID = id
+        failedTabs.remove(id)
     }
 
     private func setTitle(tab id: UUID, _ title: String) {
@@ -281,6 +317,7 @@ final class AppModel {
               let next = ws.layout.effective(forPaneCount: ws.tabs.count).neighbor(of: current, direction, paneCount: ws.tabs.count) else { return }
         let target = ws.tabs[next]
         mutateActive { $0.activeTabID = target.id }
+        failedTabs.remove(target.id)
         session(for: target).focus()
         flashTab = target.id
         flashID += 1
@@ -296,7 +333,10 @@ final class AppModel {
     }
 
     // MARK: History
-    func record(_ entry: HistoryEntry, tab: UUID) { try? store.append(entry, tab: tab) }
+    func record(_ entry: HistoryEntry, tab: UUID) {
+        do { try store.append(entry, tab: tab) } catch { Diagnostics.log("history append failed: \(error.localizedDescription)") }
+        finished(entry, tab: tab)
+    }
 
     func updateCwd(tab id: UUID, to cwd: String) {
         for wi in state.workspaces.indices {
@@ -304,6 +344,220 @@ final class AppModel {
                state.workspaces[wi].tabs[ti].cwd != cwd {
                 state.workspaces[wi].tabs[ti].cwd = cwd
             }
+        }
+    }
+
+    // MARK: Status badges, notifications
+
+    private func setRunning(_ running: Bool, tab id: UUID) {
+        if running { runningTabs.insert(id) } else { runningTabs.remove(id) }
+    }
+
+    /// True when `id` is the tab you are looking at right now.
+    private func isVisible(_ id: UUID) -> Bool {
+        NSApp.isActive && route == .terminal && active?.activeTabID == id
+    }
+
+    private func finished(_ entry: HistoryEntry, tab id: UUID) {
+        if entry.failed, !isVisible(id) { failedTabs.insert(id) }
+        guard state.notifyLongCommands, (entry.duration ?? 0) >= Notifier.longCommandSeconds, !isVisible(id),
+              let tab = state.workspaces.lazy.flatMap({ $0.tabs }).first(where: { $0.id == id }) else { return }
+        Notifier.shared.commandFinished(title: tab.title, command: entry.command,
+                                        exitCode: entry.exitCode, duration: entry.duration ?? 0, tab: id)
+    }
+
+    func setNotifyLongCommands(_ on: Bool) {
+        state.notifyLongCommands = on
+        if on { Notifier.shared.requestAuthorization() }
+    }
+
+    /// The shell is at its first prompt: type the template's command once.
+    private func runStartupCommand(tab id: UUID) {
+        guard let cmd = pendingStartup.removeValue(forKey: id) else { return }
+        clearStartupCommand(tab: id)            // never repeat it after a relaunch
+        sessions[id]?.run(cmd)
+    }
+
+    private func clearStartupCommand(tab id: UUID) {
+        for wi in state.workspaces.indices {
+            if let ti = state.workspaces[wi].tabs.firstIndex(where: { $0.id == id }) {
+                state.workspaces[wi].tabs[ti].startupCommand = nil
+            }
+        }
+    }
+
+    // MARK: Split, swap, broadcast
+
+    func split(_ axis: SplitAxis) {
+        route = .terminal
+        mutateActive { _ = $0.split(axis) }
+    }
+
+    static func panePayload(_ id: UUID) -> String { "pane:\(id.uuidString)" }
+
+    /// A pane header was dropped on another pane: swap them.
+    func handleDrop(_ items: [String], ontoPane target: UUID) -> Bool {
+        guard let dragged = payloadID(items, prefix: "pane:") else { return false }
+        let ok = state.swapTabs(dragged, target)
+        if ok { select(tab: dragged) }
+        return ok
+    }
+
+    func toggleBroadcast() { mutateActive { $0.broadcast.toggle() } }
+
+    /// Typing in the active pane is repeated in the other panes of a workspace that has broadcast on.
+    private func mirror(_ data: ArraySlice<UInt8>, from id: UUID) {
+        guard let ws = state.workspaces.first(where: { $0.tabs.contains { $0.id == id } }),
+              ws.broadcast, ws.activeTabID == id else { return }
+        for t in ws.tabs where t.id != id { sessions[t.id]?.sendRaw(data) }
+    }
+
+    // MARK: Find
+
+    func openFind() { route = .terminal; findOpen = true }
+
+    func closeFind() {
+        findOpen = false; findMissed = false
+        activeSession()?.clearFind()
+        activeSession()?.focus()
+    }
+
+    func findNext(forward: Bool = true) {
+        guard let s = activeSession() else { return }
+        findMissed = !findQuery.isEmpty && !s.find(findQuery, forward: forward)
+    }
+
+    // MARK: Output, folders
+
+    /// Copies the last command's output from `session`, or from the active pane when none is given.
+    func copyLastOutput(from session: TerminalSession? = nil) {
+        guard let out = (session ?? activeSession())?.lastOutput else { NSSound.beep(); return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(out, forType: .string)
+    }
+
+    func revealInFinder(_ path: String) {
+        let url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    /// Opens the folder in VS Code when it is installed.
+    func openInEditor(_ path: String) {
+        guard let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.microsoft.VSCode") else { return }
+        NSWorkspace.shared.open([URL(fileURLWithPath: (path as NSString).expandingTildeInPath)],
+                                withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+    }
+
+    var hasEditor: Bool { NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.microsoft.VSCode") != nil }
+
+    // MARK: Templates
+
+    private static let workspaceColors = ["#0A84FF", "#30B26B", "#FF7A45", "#8E6CF0", "#FF375F", "#64D2FF"]
+
+    func saveTemplate(from workspaceID: UUID? = nil) {
+        guard let ws = state.workspaces.first(where: { $0.id == (workspaceID ?? state.activeWorkspaceID) }) else { return }
+        state.templates.append(ws.asTemplate(named: ws.name))
+    }
+
+    func newWorkspace(from template: WorkspaceTemplate) {
+        let ws = template.makeWorkspace(colorHex: Self.workspaceColors[state.workspaces.count % Self.workspaceColors.count])
+        state.workspaces.append(ws)
+        state.activeWorkspaceID = ws.id
+        route = .terminal
+    }
+
+    func deleteTemplate(_ id: UUID) { state.templates.removeAll { $0.id == id } }
+
+    // MARK: Themes
+
+    /// Selects a theme. Imported themes have a single look, so the app follows their light/dark nature.
+    func useTheme(_ id: String) {
+        state.themeID = id
+        if let c = state.customThemes.first(where: { "custom-" + $0.id == id }) {
+            state.themeMode = c.isDark ? .dark : .light
+        }
+    }
+
+    /// Imports colour schemes from files (.itermcolors, Ghostty / kitty style text). Returns how many worked.
+    @discardableResult
+    func importThemes(_ urls: [URL]) -> Int {
+        var added = 0
+        for url in urls {
+            guard let data = try? Data(contentsOf: url),
+                  let t = ThemeImport.parse(data, name: url.deletingPathExtension().lastPathComponent) else {
+                Diagnostics.log("theme import failed: \(url.lastPathComponent)"); continue
+            }
+            state.customThemes.append(t); added += 1
+        }
+        Theme.custom = state.customThemes.map(Theme.init(custom:))
+        if added > 0, let last = state.customThemes.last { useTheme("custom-" + last.id) }
+        return added
+    }
+
+    func deleteCustomTheme(_ id: String) {
+        state.customThemes.removeAll { $0.id == id }
+        Theme.custom = state.customThemes.map(Theme.init(custom:))
+        if state.themeID == "custom-" + id { state.themeID = "default" }
+    }
+
+    // MARK: History across every tab
+
+    struct HistoryHit: Identifiable {
+        let id = UUID()
+        let tab: TerminalTab
+        let workspace: String
+        let entry: HistoryEntry
+    }
+
+    /// Commands matching `query` from all tabs of all workspaces, newest first.
+    func searchAllHistory(_ query: String, limit: Int = 30) -> [HistoryHit] {
+        var hits: [HistoryHit] = []
+        for ws in state.workspaces {
+            for tab in ws.tabs {
+                for e in store.history(tab: tab.id, limit: 60, matching: query) {
+                    hits.append(HistoryHit(tab: tab, workspace: ws.name, entry: e))
+                }
+            }
+        }
+        return Array(hits.sorted { $0.entry.startedAt > $1.entry.startedAt }.prefix(limit))
+    }
+
+    /// Opens the tab and puts (or runs) the command at its prompt.
+    func use(_ hit: HistoryHit, run: Bool) {
+        select(tab: hit.tab.id)
+        let s = session(for: hit.tab)
+        if run { s.run(hit.entry.command) } else { s.insert(hit.entry.command) }
+        s.focus()
+    }
+
+    // MARK: Quick terminal and smoke test
+
+    /// A throwaway terminal that is not part of any workspace (the drop-down terminal).
+    func makeEphemeralSession(name: String, onExit: @escaping () -> Void) -> TerminalSession {
+        let tab = TerminalTab(title: name)
+        return SwiftTermSession(tab: tab, integrationDir: integrationDir,
+                                eventFile: eventsDir.appendingPathComponent("\(name.replacingOccurrences(of: " ", with: "-")).log"),
+                                callbacks: .init(onCommand: { _ in }, onCwd: { _ in }, onTitle: { _ in },
+                                                 onExit: { _ in onExit() }, onFocus: {}))
+    }
+
+    func setQuickTerminal(_ on: Bool) {
+        state.quickTerminalEnabled = on
+        if on { QuickTerminal.shared.start(model: self) } else { QuickTerminal.shared.stop() }
+    }
+
+    /// `--smoke-test <file>`: used by CI. Runs a command in the first terminal and writes PASS or FAIL to the file.
+    private func runSmokeTest(resultPath: String) {
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(6))
+            guard let self else { return }
+            let marker = "BT_SMOKE_\(Int.random(in: 1000...9999))"
+            self.activeSession()?.run("echo \(marker)")
+            try? await Task.sleep(for: .seconds(4))
+            let text = self.activeSession()?.snapshotText() ?? ""
+            let pass = text.components(separatedBy: marker).count - 1 >= 2     // typed line + output
+            try? (pass ? "PASS" : "FAIL: marker not found\n" + text.suffix(400)).write(toFile: resultPath, atomically: true, encoding: .utf8)
+            exit(pass ? 0 : 1)
         }
     }
 

@@ -10,6 +10,7 @@ struct SettingsPage: View {
                 SectionCard {
                     AppearanceSection()
                     TerminalSection()
+                    TemplatesSection()
                     UpdatesSection()
                     DataSection()
                     SupportSection()
@@ -29,6 +30,15 @@ struct SettingsPage: View {
 private struct AppearanceSection: View {
     @Environment(AppModel.self) private var model
 
+    private func runImport() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.message = "Choose colour scheme files (.itermcolors, Ghostty or kitty theme text)"
+        guard panel.runModal() == .OK else { return }
+        model.importThemes(panel.urls)
+    }
+
     var body: some View {
         @Bindable var model = model
         SettingsSection(title: "Appearance", subtitle: "Light, dark or follow the Mac, and a colour theme", first: true) {
@@ -37,12 +47,22 @@ private struct AppearanceSection: View {
             }
             SettingsRow(title: "Colour theme", subtitle: "Soft palettes for the window and the terminal") { EmptyView() }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 4), spacing: 12) {
-                ForEach(Theme.all) { t in
+                ForEach(Theme.everything) { t in
                     ThemeSwatch(theme: t, selected: t.id == model.state.themeID)
-                        .onTapGesture { withAnimation(.easeOut(duration: 0.15)) { model.state.themeID = t.id } }
+                        .onTapGesture { withAnimation(.easeOut(duration: 0.15)) { model.useTheme(t.id) } }
+                        .contextMenu {
+                            if t.id.hasPrefix("custom-") {
+                                Button("Remove Theme", role: .destructive) { model.deleteCustomTheme(String(t.id.dropFirst(7))) }
+                            }
+                        }
                 }
             }
             .padding(.bottom, 8)
+            SettingsRow(title: "Import a theme",
+                        subtitle: "iTerm2 colour presets (.itermcolors) and Ghostty or kitty theme files. Right-click an imported theme to remove it.",
+                        showsDivider: false) {
+                PillButton(title: "Import…") { runImport() }
+            }
         }
     }
 }
@@ -81,6 +101,15 @@ private struct ThemeSwatch: View {
     }
 }
 
+private let monospacedFamilies: [String] = {
+    let fm = NSFontManager.shared
+    return fm.availableFontFamilies.filter { family in
+        guard let m = fm.availableMembers(ofFontFamily: family)?.first, let name = m[0] as? String,
+              let f = NSFont(name: name, size: 12) else { return false }
+        return f.isFixedPitch
+    }.sorted()
+}()
+
 private struct TerminalSection: View {
     @Environment(AppModel.self) private var model
 
@@ -90,6 +119,24 @@ private struct TerminalSection: View {
             SettingsRow(title: "Font size", subtitle: "⌘+ and ⌘− change it too", showsDivider: false) {
                 Stepper("\(Int(model.state.terminalFontSize)) pt", value: $model.state.terminalFontSize, in: 9...32, step: 1)
                     .monospacedDigit()
+            }
+            SettingsRow(title: "Font",
+                        subtitle: "Any monospaced font installed on this Mac. Ligatures are not supported by the terminal engine yet.") {
+                Picker("", selection: $model.state.terminalFontFamily) {
+                    Text("System Mono").tag("")
+                    ForEach(monospacedFamilies, id: \.self) { Text($0).tag($0) }
+                }
+                .labelsHidden().frame(width: 200)
+            }
+            SettingsRow(title: "Notify when long commands finish",
+                        subtitle: "A notification when a command that ran 10 seconds or more finishes in a tab you are not looking at.") {
+                Toggle("", isOn: Binding(get: { model.state.notifyLongCommands }, set: { model.setNotifyLongCommands($0) }))
+                    .labelsHidden().toggleStyle(.switch)
+            }
+            SettingsRow(title: "Quick terminal",
+                        subtitle: "Press ⌃` anywhere to drop a terminal down from the top of the screen. Press it again to hide.") {
+                Toggle("", isOn: Binding(get: { model.state.quickTerminalEnabled }, set: { model.setQuickTerminal($0) }))
+                    .labelsHidden().toggleStyle(.switch)
             }
             SettingsRow(title: "Resume on relaunch",
                         subtitle: "Reopen your workspaces and tabs with their text and history. Running programs can't be revived; a fresh shell starts below. The text is stored on this Mac and may contain anything you printed, so turn this off if you handle secrets.") {
@@ -106,6 +153,81 @@ private struct TerminalSection: View {
                 PillButton(title: "Clear") { model.clearSavedTerminalText() }
             }
         }
+    }
+}
+
+private struct TemplatesSection: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.theme) private var theme
+    @State private var editing: WorkspaceTemplate?
+
+    var body: some View {
+        SettingsSection(title: "Workspace templates", subtitle: "Open a whole setup in one click: layout, folders, startup commands") {
+            if model.state.templates.isEmpty {
+                Text("No templates yet. Right-click a workspace in the sidebar and choose Save as Template, or save the current one here.")
+                    .font(.system(size: 12.5)).foregroundStyle(theme.muted).fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 10)
+            }
+            ForEach(model.state.templates) { t in
+                SettingsRow(title: t.name, subtitle: "\(t.layout.label) · \(t.tabs.count) tab\(t.tabs.count == 1 ? "" : "s")") {
+                    HStack(spacing: 8) {
+                        PillButton(title: "Open") { model.newWorkspace(from: t) }
+                        PillButton(title: "Edit") { editing = t }
+                        PillButton(title: "Delete") { model.deleteTemplate(t.id) }
+                    }
+                }
+            }
+            SettingsRow(title: "Save current workspace", subtitle: "Captures its layout and each tab's folder.", showsDivider: false) {
+                PillButton(title: "Save as Template") { model.saveTemplate() }
+            }
+        }
+        .sheet(item: $editing) { t in TemplateEditor(template: t) }
+    }
+}
+
+private struct TemplateEditor: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @State var template: WorkspaceTemplate
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Edit template").font(.headline)
+            HStack {
+                TextField("Name", text: $template.name)
+                Picker("Layout", selection: $template.layout) {
+                    ForEach(PaneLayout.presets) { Text($0.label).tag($0) }
+                }
+                .frame(width: 150)
+            }
+            Text("Tabs").font(.subheadline).foregroundStyle(.secondary)
+            ScrollView {
+                VStack(spacing: 8) {
+                    ForEach($template.tabs) { $tab in
+                        HStack {
+                            TextField("Title", text: $tab.title).frame(width: 110)
+                            TextField("Folder", text: $tab.cwd)
+                            TextField("Startup command (optional)", text: $tab.command)
+                            Button { template.tabs.removeAll { $0.id == tab.id } } label: { Image(systemName: "minus.circle") }
+                                .buttonStyle(.borderless).accessibilityLabel("Remove tab")
+                        }
+                    }
+                }
+            }
+            .frame(minHeight: 120, maxHeight: 260)
+            HStack {
+                Button("Add Tab") { template.tabs.append(.init()) }
+                Spacer()
+                Button("Cancel") { dismiss() }
+                Button("Save") {
+                    if let i = model.state.templates.firstIndex(where: { $0.id == template.id }) { model.state.templates[i] = template }
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(template.name.trimmingCharacters(in: .whitespaces).isEmpty || template.tabs.isEmpty)
+            }
+        }
+        .padding(20).frame(width: 640)
     }
 }
 
@@ -205,6 +327,9 @@ private struct AboutSection: View {
                 }
             }
             .padding(.vertical, 6)
+            SettingsRow(title: "Diagnostics", subtitle: "A small log file (never your commands or terminal text) that helps when reporting a bug.") {
+                PillButton(title: "Open Logs Folder") { Diagnostics.revealLogs() }
+            }
             SettingsRow(title: "Walkthrough", subtitle: "Replay the quick tour") {
                 PillButton(title: "Show Walkthrough") { model.route = .terminal; model.walkthroughOpen = true }
             }

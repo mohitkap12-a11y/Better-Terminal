@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import BetterTerminalCore
 
 extension Color {
     /// Fixed sRGB colour from "#RRGGBB" / "#RGB".
@@ -33,6 +34,11 @@ struct Theme: Identifiable, Hashable {
     let termBg: (light: String, dark: String)
     let termFg: (light: String, dark: String)
     let accentBase: (light: String, dark: String)
+    /// 16 ANSI colours for imported themes; nil keeps SwiftTerm's defaults.
+    var ansi: [String]? = nil
+
+    /// Terminal background hex for `scheme` (used to detect changes).
+    func background(_ s: ColorScheme) -> String { s == .dark ? termBg.dark : termBg.light }
 
     static func == (l: Theme, r: Theme) -> Bool { l.id == r.id }
     func hash(into h: inout Hasher) { h.combine(id) }
@@ -85,9 +91,15 @@ struct Theme: Identifiable, Hashable {
               termBg: ("#FFFFFF", "#0A0A0A"), termFg: ("#111111", "#E5E5E5"), accentBase: ("#6B6B70", "#9A9AA0"))
     ]
 
+    /// Themes the user imported. Set by the app model whenever they change.
+    static var custom: [Theme] = []
+
+    /// Built in themes followed by imported ones.
+    static var everything: [Theme] { all + custom }
+
     static func named(_ id: String) -> Theme {
         // Themes from earlier versions fall back to the default.
-        all.first { $0.id == id } ?? all[0]
+        everything.first { $0.id == id } ?? all[0]
     }
 }
 
@@ -103,4 +115,19 @@ extension EnvironmentValues {
 enum Metrics {
     static let s1: CGFloat = 4, s2: CGFloat = 8, s3: CGFloat = 12, s4: CGFloat = 16, s6: CGFloat = 24
     static let radiusControl: CGFloat = 8, radiusCard: CGFloat = 12
+}
+
+extension Theme {
+    /// An imported scheme as a theme. It has one look for both appearances, so the app switches to
+    /// light or dark to match (see `AppModel.useTheme`).
+    init(custom c: CustomTheme) {
+        let bg = c.background, fg = c.foreground
+        let dark = c.isDark
+        let side = ThemeImport.shifted(bg, by: dark ? 0.04 : -0.04)
+        let ground = ThemeImport.shifted(bg, by: dark ? 0.015 : -0.015)
+        self.init(id: "custom-" + c.id, name: c.name,
+                  ground: (ground, ground), sidebarBase: (side, side),
+                  termBg: (bg, bg), termFg: (fg, fg), accentBase: (c.accent, c.accent),
+                  ansi: c.ansi.count == 16 ? c.ansi : nil)
+    }
 }

@@ -22,3 +22,33 @@ jobs:
       - run: brew install xcodegen
       - run: xcodegen generate
       - run: xcodebuild -project BetterTerminal.xcodeproj -scheme BetterTerminal -destination 'platform=macOS' -skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO build
+  # Launches the real app, runs `echo` in the first terminal and checks the output appears.
+  # Non-blocking for now: GUI launches on hosted runners can be flaky. Flip continue-on-error off once it is stable.
+  smoke:
+    runs-on: macos-latest
+    continue-on-error: true
+    needs: app
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - name: Build
+        run: xcodebuild -project BetterTerminal.xcodeproj -scheme BetterTerminal -destination 'platform=macOS' -derivedDataPath build -skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO build
+      - name: Launch and check
+        run: |
+          APP=$(find build/Build/Products -name 'Better Terminal.app' -o -name 'BetterTerminal.app' | head -1)
+          echo "app: $APP"
+          BIN="$APP/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print CFBundleExecutable' "$APP/Contents/Info.plist")"
+          echo "binary: $BIN"
+          "$BIN" --smoke-test "$RUNNER_TEMP/smoke.txt" &
+          PID=$!
+          for i in $(seq 1 40); do
+            if [ -f "$RUNNER_TEMP/smoke.txt" ]; then break; fi
+            if ! kill -0 $PID 2>/dev/null; then break; fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/smoke.txt" || { echo "no result file (app crashed or hung)"; exit 1; }
+          grep -q '^PASS' "$RUNNER_TEMP/smoke.txt"
+      - name: App log
+        if: always()
+        run: cat ~/Library/Logs/BetterTerminal/app.log 2>/dev/null || true

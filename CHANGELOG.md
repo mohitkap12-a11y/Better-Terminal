@@ -12,6 +12,18 @@ All notable changes. Release notes shown in the update window live in `docs/rele
 - Right-click a workspace → New Terminal.
 - Closing a tab that is still running a command asks first, with "Don't ask me again". Turn it back on in Settings → Terminal.
 
+- Split panes: ⌘D splits right, ⇧⌘D splits down (a new pane next to the current one, same folder).
+- Find in terminal (⌘F, ⌘G / ⇧⌘G) with highlighted matches.
+- Tab status: a spinner while a command runs, a red dot when one failed in a tab you have not looked at; notifications when commands that took 10 s or more finish in another tab (Settings → Terminal).
+- Workspace templates: save a workspace (layout and folders), add startup commands, open it again in one click (Settings, sidebar menu, palette).
+- Palette search covers command history from every tab and workspace.
+- Broadcast input: type once, send to every pane of a workspace (⌥⌘I).
+- Quick terminal: ⌃` drops a terminal from the top of the screen (Settings → Terminal).
+- Import themes (.itermcolors, Ghostty, kitty) and choose any monospaced font.
+- Drag a pane's header onto another pane to swap them; right-click the folder in a pane header to reveal it in Finder or open it in VS Code.
+- Copy last command output (⌥⌘C).
+- Diagnostics: a log file and crash notes in ~/Library/Logs/BetterTerminal (Settings → About → Open Logs Folder); CI now also launches the app and runs a command.
+
 ### Changed
 - Pane layouts shrink to fit: a 1×6 layout with 5 tabs shows 1×5, with 2 tabs 1×2, and grows back as you add tabs. Your chosen layout is unchanged.
 

@@ -42,6 +42,24 @@ public struct PaneLayout: Codable, Hashable, Sendable, Identifiable {
         return PaneLayout(rows: min(rows, needed), columns: cols)
     }
 
+    /// The smallest change to this layout that has room for `count` panes, growing along `axis`
+    /// (`.right` adds columns, `.down` adds rows). Never exceeds `maxDimension` per side.
+    public func growing(toFit count: Int, along axis: SplitAxis) -> PaneLayout {
+        var r = rows, c = columns
+        func full() -> Bool { r * c >= count }
+        switch axis {
+        case .right:
+            if r == 1 { c = min(Self.maxDimension, max(c, count)) }
+            while !full() && c < Self.maxDimension { c += 1 }
+            while !full() && r < Self.maxDimension { r += 1 }
+        case .down:
+            if c == 1 { r = min(Self.maxDimension, max(r, count)) }
+            while !full() && r < Self.maxDimension { r += 1 }
+            while !full() && c < Self.maxDimension { c += 1 }
+        }
+        return PaneLayout(rows: r, columns: c)
+    }
+
     /// Grid cell for the pane at `index` (row-major). Panes beyond capacity
     /// spill into extra rows so no pane is ever hidden.
     public func cell(forPaneAt index: Int) -> (row: Int, column: Int) {
