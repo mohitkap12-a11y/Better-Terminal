@@ -65,5 +65,6 @@ struct PaneView: View {
         .frame(height: 28)
         .contentShape(Rectangle())
         .onTapGesture { model.mutateActive { $0.activeTabID = tab.id }; session.focus() }
+        .onMiddleClick { model.requestCloseTab(tab.id) }
     }
 }

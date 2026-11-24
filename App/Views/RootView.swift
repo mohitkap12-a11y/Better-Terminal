@@ -20,13 +20,14 @@ struct RootView: View {
                                                description: Text("Create a workspace to get started."))
                     }
                 case .settings:
-                    SettingsPage()
+                    SettingsPage().overlay(alignment: .top) { WindowDragArea().frame(height: 28) }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(theme.groundColor)
         }
         .ignoresSafeArea(.container, edges: .top)
+        .background(WindowConfigurator())
         .sheet(isPresented: Bindable(model).paletteOpen) { CommandPalette() }
         .alert("Rename tab", isPresented: Binding(get: { model.renamingTab != nil },
                                                   set: { if !$0 { model.renamingTab = nil } })) {

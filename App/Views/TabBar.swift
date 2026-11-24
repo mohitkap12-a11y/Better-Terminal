@@ -37,6 +37,7 @@ struct TabBar: View {
         .padding(.top, Metrics.s2)
         .frame(height: 40)
         .background(theme.groundColor)
+        .background(WindowDragArea())
     }
 }
 
@@ -54,7 +55,7 @@ private struct TabChip: View {
             Image(systemName: "terminal").font(.caption).foregroundStyle(.secondary)
             Text(tab.title).lineLimit(1).font(.callout)
             if canClose {
-                Button { model.closeTab(tab.id) } label: {
+                Button { model.requestCloseTab(tab.id) } label: {
                     Image(systemName: "xmark").font(.system(size: 9, weight: .bold))
                 }
                 .buttonStyle(.plain)
@@ -70,8 +71,10 @@ private struct TabChip: View {
         .overlay(alignment: .leading) {
             if dropTarget { Capsule().fill(theme.accent).frame(width: 3, height: 20).offset(x: -3) }   // drop here
         }
-        .onTapGesture(count: 2) { model.beginRenameTab(tab) }
+        // Single tap acts at once; waiting to rule out a double-tap made switching feel slow.
         .onTapGesture { model.mutateActive { $0.activeTabID = tab.id } }
+        .simultaneousGesture(TapGesture(count: 2).onEnded { model.beginRenameTab(tab) })
+        .onMiddleClick { model.requestCloseTab(tab.id) }
         .onHover { hovering = $0 }
         .draggable(AppModel.tabPayload(tab.id))
         .dropDestination(for: String.self) { items, _ in

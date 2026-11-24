@@ -7,7 +7,7 @@ struct PaneGrid: View {
     let workspace: Workspace
 
     var body: some View {
-        let layout = workspace.layout
+        let layout = workspace.layout.effective(forPaneCount: workspace.tabs.count)
         let rows = layout.rowsNeeded(forPaneCount: workspace.tabs.count)
         Grid(horizontalSpacing: 1, verticalSpacing: 1) {
             ForEach(0..<rows, id: \.self) { r in

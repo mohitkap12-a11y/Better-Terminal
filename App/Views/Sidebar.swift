@@ -74,6 +74,8 @@ struct Sidebar: View {
         .frame(width: collapsed ? SidebarState.collapsedWidth : SidebarState.expandedWidth)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(theme.sidebar)
+        // Title-bar strip that drags the window (the traffic lights sit on top of it).
+        .overlay(alignment: .top) { WindowDragArea().frame(height: 40) }
         .clipped()
         .overlay(alignment: .trailing) { Rectangle().fill(theme.border).frame(width: 1) }
         .overlay(alignment: .topTrailing) {
@@ -116,6 +118,8 @@ struct Sidebar: View {
                     model.handleDrop(items, ontoWorkspace: ws.id)
                 } isTargeted: { targetedWorkspace = $0 ? ws.id : (targetedWorkspace == ws.id ? nil : targetedWorkspace) }
                 .contextMenu {
+                    Button("New Terminal") { model.newTab(in: ws.id) }
+                    Divider()
                     Button("Rename…") { newName = ws.name; renaming = ws }
                     Menu("Color") {
                         ForEach(colors, id: \.self) { hex in
@@ -292,8 +296,9 @@ private struct SidebarTabRow: View {
         }
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
-        .onTapGesture(count: 2) { model.beginRenameTab(tab) }
         .onTapGesture { model.select(tab: tab.id) }
+        .simultaneousGesture(TapGesture(count: 2).onEnded { model.beginRenameTab(tab) })
+        .onMiddleClick { model.requestCloseTab(tab.id) }
         .draggable(AppModel.tabPayload(tab.id))
         .dropDestination(for: String.self) { items, _ in
             model.handleDrop(items, ontoTab: tab.id)

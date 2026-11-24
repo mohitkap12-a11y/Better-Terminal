@@ -33,7 +33,7 @@ struct BetterTerminalApp: App {
                 Button("New Tab") { model.route = .terminal; model.newTab() }.keyboardShortcut("t")
                 Button("New Workspace") { model.addWorkspace() }.keyboardShortcut("n", modifiers: [.command, .shift])
                 Button("Close Tab") {
-                    if let id = model.active?.activeTabID { model.closeTab(id) }
+                    if let id = model.active?.activeTabID { model.requestCloseTab(id) }
                 }.keyboardShortcut("w").disabled((model.active?.tabs.count ?? 0) < 2)
             }
             CommandMenu("View") {

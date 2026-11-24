@@ -31,6 +31,17 @@ public struct PaneLayout: Codable, Hashable, Sendable, Identifiable {
         .init(rows: 3, columns: 3)
     ]
 
+    /// The layout actually drawn for `paneCount` panes: it shrinks along its long side while there are fewer
+    /// panes than slots (1×6 with 5 tabs shows 1×5, with 2 tabs 1×2) and grows back as tabs are added.
+    /// The chosen layout itself never changes.
+    public func effective(forPaneCount paneCount: Int) -> PaneLayout {
+        let n = max(paneCount, 1)
+        guard n < capacity else { return self }
+        let cols = min(columns, n)
+        let needed = Int((Double(n) / Double(cols)).rounded(.up))
+        return PaneLayout(rows: min(rows, needed), columns: cols)
+    }
+
     /// Grid cell for the pane at `index` (row-major). Panes beyond capacity
     /// spill into extra rows so no pane is ever hidden.
     public func cell(forPaneAt index: Int) -> (row: Int, column: Int) {
