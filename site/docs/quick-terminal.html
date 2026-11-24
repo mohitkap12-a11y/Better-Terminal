@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Quick terminal | Better Terminal docs</title>
-<meta name="description" content="The quick terminal is a terminal that drops down from the top of your screen when you press a key, from any app, and hides again when you press it again. It is ">
+<meta name="description" content="The quick terminal is a small terminal that pops up in the bottom-right corner of your screen when you press a key, from any app. It is for the one-off command ">
 <meta property="og:title" content="Quick terminal | Better Terminal docs"><meta property="og:type" content="website">
 <meta property="og:image" content="https://mohitkap12-a11y.github.io/Better-Terminal/assets/og.png">
 <link rel="icon" href="../assets/favicon.png"><link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
@@ -27,7 +27,7 @@
   <article class="dbody">
     <p class="crumbs"><a href="../index.html">Home</a> › <a href="./">Docs</a> › Quick terminal</p>
 <h1>Quick terminal</h1>
-<p>The quick terminal is a terminal that drops down from the top of your screen when you press a key, from any app, and hides again when you press it again. It is for the one-off command you do not want a tab for.</p>
+<p>The quick terminal is a small terminal that pops up in the bottom-right corner of your screen when you press a key, from any app. It is for the one-off command you do not want a tab for.</p>
 <h2 id="turn-it-on">Turn it on<a class="anchor" href="#turn-it-on" aria-label="Link to this section">#</a></h2>
 <p>Settings ▸ Terminal ▸ <strong>Quick terminal</strong>. It is off by default.</p>
 <h2 id="the-key">The key<a class="anchor" href="#the-key" aria-label="Link to this section">#</a></h2>
@@ -36,12 +36,16 @@
 <p>Under the picker, a status line says whether the key was registered, for example <em>Listening for ⌃`</em>, or tells you if macOS refused it so you can pick another. If a key does not seem to work, another app may be using it: choose a different one.</p>
 <p><strong>Show now</strong> opens the quick terminal without the key, which is a good way to check that everything else works.</p>
 <h2 id="how-it-behaves">How it behaves<a class="anchor" href="#how-it-behaves" aria-label="Link to this section">#</a></h2>
-<ul><li>It slides down over the top 42% of the screen the key was pressed on, across the full width, and floats above other windows on every Space.</li><li>It has its own shell. It is not one of your workspaces, so its commands do not appear in any tab's history and it is not saved or restored.</li><li>The shell stays alive while the app runs, so the next press shows what you left. If you <code>exit</code> the shell, the next press starts a fresh one.</li><li>It uses your current theme and font size.</li><li>Turning the setting off releases the key and ends its shell.</li></ul>
+<ul><li>It appears as a rounded 580 × 340 window in the bottom-right corner of the screen the pointer is on, floats above other windows on every Space, and slides up from the edge.</li><li><strong>Esc hides it.</strong> The key you chose hides it too. If a command is running, Esc goes to that program instead (for example vim), so use the key to hide it then.</li><li>It has its own shell. It is not one of your workspaces, so its commands do not appear in any tab's history and it is not saved or restored.</li><li>The shell stays alive while the app runs, so the next press shows what you left. If you <code>exit</code> the shell, the next press starts a fresh one.</li><li>It uses your current theme and font size.</li><li>Turning the setting off releases the key and ends its shell.</li></ul>
+<h2 id="which-folder-it-opens-in">Which folder it opens in<a class="anchor" href="#which-folder-it-opens-in" aria-label="Link to this section">#</a></h2>
+<ul><li>Pressed from <strong>Finder</strong>: the folder of the front Finder window (the Desktop if no window is open).</li><li>Pressed inside <strong>Better Terminal</strong>: the folder of the tab you are looking at.</li><li>Anywhere else: the shell's current folder (your home folder on the first use).</li></ul>
+<p>The first time you use it from Finder, macOS asks whether Better Terminal may control Finder. This is only used to read the open folder. If you decline, the quick terminal still works, it just does not follow Finder; you can allow it later in System Settings ▸ Privacy &amp; Security ▸ Automation.</p>
+<p>When the quick terminal already exists, a different folder is applied by typing <code>cd</code> into it, but only when it is idle at a prompt. If a command is running, the folder is left alone.</p>
 <p>The app must be running for the key to work. Better Terminal does not add itself to your login items.</p>
 <nav class="pn"><a class="prev" href="notifications.html"><small>Previous</small>Tab status and notifications</a><a class="next" href="themes.html"><small>Next</small>Themes and fonts</a></nav>
     <p class="edit"><a href="https://github.com/mohitkap12-a11y/Better-Terminal/edit/main/docs/site-src/quick-terminal.md">Edit this page on GitHub</a></p>
   </article>
-  <aside class="dtoc" aria-label="On this page"><div class="dt">On this page</div><a href="#turn-it-on">Turn it on</a><a href="#the-key">The key</a><a href="#how-it-behaves">How it behaves</a></aside>
+  <aside class="dtoc" aria-label="On this page"><div class="dt">On this page</div><a href="#turn-it-on">Turn it on</a><a href="#the-key">The key</a><a href="#how-it-behaves">How it behaves</a><a href="#which-folder-it-opens-in">Which folder it opens in</a></aside>
 </div></main>
 <footer><div class="wrap"><span>© Better Terminal · open source</span><span class="flinks"><a href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal/releases">Releases</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal/issues">Issues</a><a href="./">Docs</a><a href="../support.html">Support</a></span></div></footer>
 <script src="../script.js"></script>

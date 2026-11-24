@@ -5,7 +5,7 @@ order: 1
 ---
 # Keyboard shortcuts
 
-Shortcuts are also listed in Settings ▸ Shortcuts and in the app's menus.
+Press ⌘/ (or click **Shortcuts** in the sidebar, below Search) for a searchable popup with all of these. They are also listed in Settings ▸ Shortcuts, which has a button to open the popup, and in the app's menus.
 
 ## Tabs and workspaces
 
@@ -57,5 +57,6 @@ Shortcuts are also listed in Settings ▸ Shortcuts and in the app's menus.
 
 | Action | Keys |
 | --- | --- |
+| Keyboard shortcuts popup | ⌘/ |
 | Settings | ⌘, |
 | Check for updates | Better Terminal ▸ Check for Updates… |

@@ -25,7 +25,7 @@ struct Walkthrough: View {
         Page(title: "Know when it's done",
              text: "A spinner shows while a command runs and a red dot marks a failed one. When a long command finishes in another tab, you get a notification. ⌥⌘I broadcasts what you type to every pane."),
         Page(title: "Quick terminal",
-             text: "Turn it on in Settings, then press ⌃` from any app to drop a terminal down from the top of the screen. Press it again to hide. You can choose another key."),
+             text: "Turn it on in Settings, then press ⌃` from any app to pop up a small terminal in the bottom-right corner, opened in the folder you were in. Esc or the same key hides it. You can choose another key."),
         Page(title: "Make it yours",
              text: "Pick a soft colour theme, or import an iTerm2, Ghostty or kitty theme. Choose any monospaced font. Every feature is explained in the documentation on the website.")
     ]

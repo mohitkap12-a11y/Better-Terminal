@@ -41,7 +41,7 @@ A quick tour. Each feature links to its full page.
 
 **[Tab status](notifications.html)** shows a spinner while a command runs and a red dot when one failed. Long commands can send a notification.
 
-**[Quick terminal](quick-terminal.html)** drops a terminal down from the top of the screen on a global key.
+**[Quick terminal](quick-terminal.html)** pops up a small terminal in the bottom-right corner on a global key, in the folder you were in.
 
 ## Look and feel
 

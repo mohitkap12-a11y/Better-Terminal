@@ -21,6 +21,7 @@ final class AppModel {
     // UI triggers (keyboard shortcuts)
     var route: AppRoute = .terminal
     var paletteOpen = false
+    var shortcutsOpen = false
     var walkthroughOpen = false
     /// Tab being renamed (the alert lives in RootView) and the text typed so far.
     var renamingTab: UUID?
@@ -78,6 +79,8 @@ final class AppModel {
     var allThemes: [Theme] { Theme.all + state.customThemes.map(Theme.init(custom:)) }
     var theme: Theme { allThemes.first { $0.id == state.themeID } ?? Theme.all[0] }
     /// The imported theme in use, if any. Those have one look (light or dark), so they decide the appearance.
+    /// Folder of the tab you are looking at (the quick terminal opens there when launched from inside the app).
+    var activeTabFolder: String? { active?.tabs.first { $0.id == active?.activeTabID }?.cwd }
     var activeCustomTheme: CustomTheme? { state.customThemes.first { "custom-" + $0.id == state.themeID } }
     /// Applies System / Light / Dark to the whole app. `NSApp.appearance = nil` is what makes "System" follow macOS
     /// again; SwiftUI's `preferredColorScheme(nil)` does not undo an earlier Light or Dark choice.
@@ -563,11 +566,12 @@ final class AppModel {
     // MARK: Quick terminal and smoke test
 
     /// A throwaway terminal that is not part of any workspace (the drop-down terminal).
-    func makeEphemeralSession(name: String, onExit: @escaping () -> Void) -> TerminalSession {
-        let tab = TerminalTab(title: name)
+    func makeEphemeralSession(name: String, cwd: String? = nil, onCwd: @escaping (String) -> Void = { _ in },
+                              onExit: @escaping () -> Void) -> TerminalSession {
+        let tab = TerminalTab(title: name, cwd: cwd ?? NSHomeDirectory())
         return SwiftTermSession(tab: tab, integrationDir: integrationDir,
                                 eventFile: eventsDir.appendingPathComponent("\(name.replacingOccurrences(of: " ", with: "-")).log"),
-                                callbacks: .init(onCommand: { _ in }, onCwd: { _ in }, onTitle: { _ in },
+                                callbacks: .init(onCommand: { _ in }, onCwd: { onCwd($0) }, onTitle: { _ in },
                                                  onExit: { _ in onExit() }, onFocus: {}))
     }
 
