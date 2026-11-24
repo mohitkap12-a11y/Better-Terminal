@@ -11,6 +11,8 @@ final class AppModel {
     @ObservationIgnored let store: WorkspaceStore
     @ObservationIgnored private var saveTask: Task<Void, Never>?
     @ObservationIgnored private var sessions: [UUID: TerminalSession] = [:]
+    /// Template commands waiting for their shell's first prompt.
+    @ObservationIgnored private var pendingStartup: [UUID: String] = [:]
     /// Terminal text that was on screen when the user pressed "Clear saved text": never saved again.
     @ObservationIgnored private var clearedBaseline: [UUID: String] = [:]
     @ObservationIgnored private let integrationDir: URL
@@ -258,15 +260,20 @@ final class AppModel {
             onTitle: { [weak self] in self?.setTitle(tab: id, $0) },
             onExit: { [weak self] _ in self?.restart(tab: id) },
             onFocus: { [weak self] in self?.focusTab(id) },
-            onRunning: { [weak self] running in self?.setRunning(running, tab: id) }))
+            onRunning: { [weak self] running in self?.setRunning(running, tab: id) },
+            onReady: { [weak self] in self?.runStartupCommand(tab: id) }))
         s.onInput = { [weak self] data in self?.mirror(data, from: id) }
         sessions[id] = s
         if let cmd = tab.startupCommand, !cmd.isEmpty {
-            // Template tabs: type the command once the shell is up. Cleared first so a relaunch never repeats it.
+            // Template tabs: wait for the shell's first prompt (so slow or interactive start-up files don't swallow
+            // the command). If no prompt signal ever arrives, give up after a while instead of typing blindly.
+            pendingStartup[id] = cmd
             Task { [weak self] in
-                try? await Task.sleep(for: .milliseconds(900))
-                self?.clearStartupCommand(tab: id)
-                s.run(cmd)
+                try? await Task.sleep(for: .seconds(15))
+                if self?.pendingStartup.removeValue(forKey: id) != nil {
+                    Diagnostics.log("startup command skipped: shell never reported a prompt")
+                    self?.clearStartupCommand(tab: id)
+                }
             }
         }
         return s
@@ -364,6 +371,13 @@ final class AppModel {
         if on { Notifier.shared.requestAuthorization() }
     }
 
+    /// The shell is at its first prompt: type the template's command once.
+    private func runStartupCommand(tab id: UUID) {
+        guard let cmd = pendingStartup.removeValue(forKey: id) else { return }
+        clearStartupCommand(tab: id)            // never repeat it after a relaunch
+        sessions[id]?.run(cmd)
+    }
+
     private func clearStartupCommand(tab id: UUID) {
         for wi in state.workspaces.indices {
             if let ti = state.workspaces[wi].tabs.firstIndex(where: { $0.id == id }) {
@@ -415,8 +429,9 @@ final class AppModel {
 
     // MARK: Output, folders
 
-    func copyLastOutput() {
-        guard let out = activeSession()?.lastOutput else { NSSound.beep(); return }
+    /// Copies the last command's output from `session`, or from the active pane when none is given.
+    func copyLastOutput(from session: TerminalSession? = nil) {
+        guard let out = (session ?? activeSession())?.lastOutput else { NSSound.beep(); return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(out, forType: .string)
     }

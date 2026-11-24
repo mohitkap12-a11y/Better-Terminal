@@ -88,6 +88,8 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
         var onExit: @MainActor (Int32?) -> Void
         var onFocus: @MainActor () -> Void
         var onRunning: @MainActor (Bool) -> Void = { _ in }
+        /// The shell finished its start-up files and showed its first prompt.
+        var onReady: @MainActor () -> Void = {}
     }
 
     private let view = BTTerminalView(frame: .zero)
@@ -102,6 +104,7 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
     private var appliedKey: String?
     private var hadCustomColors = false
     private var outputStart = 0
+    private var ready = false
     private(set) var lastOutput: String?
     var onInput: ((ArraySlice<UInt8>) -> Void)? {
         get { view.onInput }
@@ -163,6 +166,7 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
             }
             Task { @MainActor in callbacks.onRunning(false) }
         case .cwd(let cwd)?:
+            if !ready { ready = true; Task { @MainActor in callbacks.onReady() } }
             tracker.cwd = cwd
             Task { @MainActor in callbacks.onCwd(cwd) }
         case nil:

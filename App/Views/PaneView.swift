@@ -66,7 +66,7 @@ struct PaneView: View {
                         NSPasteboard.general.clearContents(); NSPasteboard.general.setString(tab.cwd, forType: .string)
                     }
                     Divider()
-                    Button("Copy Last Output") { model.copyLastOutput() }
+                    Button("Copy Last Output") { model.copyLastOutput(from: session) }
                 }
             TabStatusBadge(id: tab.id, selected: focused)
             Spacer()
