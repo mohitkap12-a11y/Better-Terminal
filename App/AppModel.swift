@@ -116,6 +116,38 @@ final class AppModel {
     // MARK: Tabs
     func newTab() { mutateActive { $0.addTab() } }
 
+    /// Adds a terminal to a specific workspace (sidebar context menu) and shows it.
+    func newTab(in workspaceID: UUID) {
+        guard let i = state.workspaces.firstIndex(where: { $0.id == workspaceID }) else { return }
+        state.workspaces[i].addTab()
+        state.activeWorkspaceID = workspaceID
+        route = .terminal
+    }
+
+    /// Closes a tab from the UI. If a command is running, asks first (unless the user turned that off).
+    func requestCloseTab(_ id: UUID) {
+        guard canCloseTab(id) else { return }
+        guard state.confirmCloseRunning, sessions[id]?.hasRunningCommand == true,
+              let tab = state.workspaces.lazy.flatMap({ $0.tabs }).first(where: { $0.id == id }) else {
+            closeTab(id); return
+        }
+        let alert = NSAlert()
+        alert.messageText = "Close “\(tab.title)”?"
+        alert.informativeText = "A command is still running in this tab. Closing it will stop the command."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Close Tab")
+        alert.addButton(withTitle: "Cancel")
+        alert.showsSuppressionButton = true
+        alert.suppressionButton?.title = "Don’t ask me again"
+        let finish: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            guard let self, response == .alertFirstButtonReturn else { return }
+            if alert.suppressionButton?.state == .on { self.state.confirmCloseRunning = false }
+            self.closeTab(id)
+        }
+        if let window = NSApp.keyWindow { alert.beginSheetModal(for: window, completionHandler: finish) }
+        else { finish(alert.runModal()) }
+    }
+
     /// A workspace always keeps at least one tab, so its last tab can't be closed.
     func canCloseTab(_ id: UUID) -> Bool {
         state.workspaces.contains { $0.tabs.count > 1 && $0.tabs.contains { $0.id == id } }
@@ -246,7 +278,7 @@ final class AppModel {
     func focusPane(_ direction: PaneDirection) {
         guard let ws = active, let activeID = ws.activeTabID,
               let current = ws.tabs.firstIndex(where: { $0.id == activeID }),
-              let next = ws.layout.neighbor(of: current, direction, paneCount: ws.tabs.count) else { return }
+              let next = ws.layout.effective(forPaneCount: ws.tabs.count).neighbor(of: current, direction, paneCount: ws.tabs.count) else { return }
         let target = ws.tabs[next]
         mutateActive { $0.activeTabID = target.id }
         session(for: target).focus()

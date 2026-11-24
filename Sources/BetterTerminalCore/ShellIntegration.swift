@@ -168,6 +168,9 @@ public struct CommandTracker: Sendable {
 
     public init(cwd: String) { self.cwd = cwd }
 
+    /// True between a command starting and finishing: something is running in the shell.
+    public var isRunning: Bool { pending != nil }
+
     public mutating func commandStarted(_ command: String, at date: Date = Date()) {
         let c = command.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !c.isEmpty else { return }

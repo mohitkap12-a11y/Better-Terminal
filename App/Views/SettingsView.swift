@@ -98,6 +98,10 @@ private struct TerminalSection: View {
                         if !on { model.clearSavedTerminalText() }
                     }
             }
+            SettingsRow(title: "Confirm before closing a busy tab",
+                        subtitle: "Ask first when a command is still running in the tab you close.") {
+                Toggle("", isOn: $model.state.confirmCloseRunning).labelsHidden().toggleStyle(.switch)
+            }
             SettingsRow(title: "Saved terminal text", subtitle: "Delete the text saved for resuming. History is kept.") {
                 PillButton(title: "Clear") { model.clearSavedTerminalText() }
             }

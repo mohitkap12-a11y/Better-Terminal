@@ -89,6 +89,8 @@ public struct AppState: Codable, Sendable {
     public var terminalFontSize: Double = 13
     /// Save each terminal's text on quit and show it again on relaunch.
     public var restoreTerminalText: Bool = true
+    /// Ask before closing a tab that is running a command.
+    public var confirmCloseRunning: Bool = true
 
     public init(workspaces: [Workspace] = [], activeWorkspaceID: UUID? = nil) {
         self.workspaces = workspaces
@@ -105,6 +107,7 @@ public struct AppState: Codable, Sendable {
         themeID = try c.decodeIfPresent(String.self, forKey: .themeID) ?? "default"
         terminalFontSize = try c.decodeIfPresent(Double.self, forKey: .terminalFontSize) ?? 13
         restoreTerminalText = try c.decodeIfPresent(Bool.self, forKey: .restoreTerminalText) ?? true
+        confirmCloseRunning = try c.decodeIfPresent(Bool.self, forKey: .confirmCloseRunning) ?? true
     }
 
     public static func fresh() -> AppState {

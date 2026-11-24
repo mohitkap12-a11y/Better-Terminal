@@ -152,7 +152,7 @@ struct TabContextMenu: ViewModifier {
                 Button("New Workspace") { model.moveTabToNewWorkspace(tab.id) }
             }
             Divider()
-            Button("Close Tab", role: .destructive) { model.closeTab(tab.id) }
+            Button("Close Tab", role: .destructive) { model.requestCloseTab(tab.id) }
                 .disabled(!model.canCloseTab(tab.id))
         }
     }

@@ -341,3 +341,43 @@ final class ReorderTests: XCTestCase {
         XCTAssertEqual(tab.shellTitle, "T")
     }
 }
+
+
+final class EffectiveLayoutTests: XCTestCase {
+    func testShrinksAlongLongSide() {
+        let l = PaneLayout(rows: 1, columns: 6)
+        XCTAssertEqual(l.effective(forPaneCount: 6), l)
+        XCTAssertEqual(l.effective(forPaneCount: 5), PaneLayout(rows: 1, columns: 5))
+        XCTAssertEqual(l.effective(forPaneCount: 2), PaneLayout(rows: 1, columns: 2))
+        XCTAssertEqual(l.effective(forPaneCount: 1), PaneLayout(rows: 1, columns: 1))
+        let v = PaneLayout(rows: 6, columns: 1)
+        XCTAssertEqual(v.effective(forPaneCount: 3), PaneLayout(rows: 3, columns: 1))
+    }
+
+    func testGridShrinksAndNeverHidesPanes() {
+        let g = PaneLayout(rows: 3, columns: 3)
+        XCTAssertEqual(g.effective(forPaneCount: 4), PaneLayout(rows: 2, columns: 3))
+        XCTAssertEqual(g.effective(forPaneCount: 2), PaneLayout(rows: 1, columns: 2))
+        XCTAssertEqual(PaneLayout(rows: 2, columns: 2).effective(forPaneCount: 3), PaneLayout(rows: 2, columns: 2))
+        for layout in PaneLayout.presets {
+            for n in 1...12 {
+                let e = layout.effective(forPaneCount: n)
+                XCTAssertGreaterThanOrEqual(max(e.capacity, e.columns * e.rowsNeeded(forPaneCount: n)), n)
+            }
+        }
+    }
+
+    func testTrackerReportsRunning() {
+        var t = CommandTracker(cwd: "/")
+        XCTAssertFalse(t.isRunning)
+        t.commandStarted("sleep 5")
+        XCTAssertTrue(t.isRunning)
+        _ = t.commandFinished(exitCode: 0)
+        XCTAssertFalse(t.isRunning)
+    }
+
+    func testConfirmCloseDefaultsOnForOldState() throws {
+        let old = #"{"workspaces":[]}"#.data(using: .utf8)!
+        XCTAssertTrue(try JSONDecoder().decode(AppState.self, from: old).confirmCloseRunning)
+    }
+}

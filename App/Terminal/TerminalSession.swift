@@ -12,6 +12,8 @@ protocol TerminalSession: AnyObject {
     func run(_ text: String)         // replaces the current prompt line and runs
     func apply(theme: Theme, scheme: ColorScheme, fontSize: Double)
     func terminate()
+    /// A command is running in the shell right now (not just an idle prompt).
+    var hasRunningCommand: Bool { get }
     /// Plain text of the terminal (scrollback + screen), for restoring it after a relaunch.
     func snapshotText() -> String
 }
@@ -77,6 +79,8 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
     private let callbacks: Callbacks
     private let shellKind: ShellIntegration.Kind
     var nsView: NSView { view }
+    var hasRunningCommand: Bool { tracker.isRunning }
+    private var appliedKey: String?
 
     init(tab: TerminalTab, integrationDir: URL, eventFile: URL, restoredText: String? = nil, callbacks: Callbacks) {
         self.tracker = CommandTracker(cwd: tab.cwd)
@@ -151,6 +155,10 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
     }
 
     func apply(theme: Theme, scheme: ColorScheme, fontSize: Double) {
+        // Re-applying identical colors/fonts makes the terminal redraw fully; skip when nothing changed.
+        let key = "\(theme.id)|\(scheme == .dark)|\(fontSize)"
+        guard key != appliedKey else { return }
+        appliedKey = key
         view.nativeBackgroundColor = NSColor(theme.terminalBackground(scheme))
         view.nativeForegroundColor = NSColor(theme.terminalForeground(scheme))
         let f = NSFont.monospacedSystemFont(ofSize: CGFloat(fontSize), weight: .regular)
