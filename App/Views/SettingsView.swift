@@ -42,12 +42,17 @@ private struct AppearanceSection: View {
     var body: some View {
         @Bindable var model = model
         SettingsSection(title: "Appearance", subtitle: "Light, dark or follow the Mac, and a colour theme", first: true) {
-            SettingsRow(title: "Mode", subtitle: "System follows the macOS appearance", showsDivider: false) {
+            SettingsRow(title: "Mode",
+                        subtitle: model.activeCustomTheme.map { "\($0.name) is a \($0.isDark ? "dark" : "light") theme, so the window stays \($0.isDark ? "dark" : "light"). Pick a built-in theme to use System, Light or Dark." }
+                            ?? "System follows the macOS appearance",
+                        showsDivider: false) {
                 ChoiceChips(values: ThemeMode.allCases, selection: $model.state.themeMode) { $0.rawValue.capitalized }
+                    .disabled(model.activeCustomTheme != nil)
+                    .opacity(model.activeCustomTheme != nil ? 0.45 : 1)
             }
             SettingsRow(title: "Colour theme", subtitle: "Soft palettes for the window and the terminal") { EmptyView() }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 4), spacing: 12) {
-                ForEach(Theme.everything) { t in
+                ForEach(model.allThemes) { t in
                     ThemeSwatch(theme: t, selected: t.id == model.state.themeID)
                         .onTapGesture { withAnimation(.easeOut(duration: 0.15)) { model.useTheme(t.id) } }
                         .contextMenu {
@@ -134,9 +139,25 @@ private struct TerminalSection: View {
                     .labelsHidden().toggleStyle(.switch)
             }
             SettingsRow(title: "Quick terminal",
-                        subtitle: "Press ⌃` anywhere to drop a terminal down from the top of the screen. Press it again to hide.") {
+                        subtitle: "A key you press anywhere to drop a terminal down from the top of the screen. Press it again to hide.") {
                 Toggle("", isOn: Binding(get: { model.state.quickTerminalEnabled }, set: { model.setQuickTerminal($0) }))
                     .labelsHidden().toggleStyle(.switch)
+            }
+            if model.state.quickTerminalEnabled {
+                SettingsRow(title: "Quick terminal key",
+                            subtitle: model.quickStatus.isEmpty ? "Choose the key that opens it." : model.quickStatus) {
+                    HStack(spacing: 8) {
+                        Picker("", selection: Binding(get: { model.state.quickTerminalHotkey }, set: { model.setQuickHotkey($0) })) {
+                            ForEach(QuickHotkey.allCases) { Text($0.label).tag($0.rawValue) }
+                        }
+                        .labelsHidden().frame(width: 190)
+                        PillButton(title: "Show now") { QuickTerminal.shared.toggle() }
+                    }
+                }
+            }
+            SettingsRow(title: "Right-click copies selected text",
+                        subtitle: "Off: right-click always shows the menu (copy, paste, find, split…). On: with text selected it copies immediately.") {
+                Toggle("", isOn: $model.state.rightClickCopies).labelsHidden().toggleStyle(.switch)
             }
             SettingsRow(title: "Resume on relaunch",
                         subtitle: "Reopen your workspaces and tabs with their text and history. Running programs can't be revived; a fresh shell starts below. The text is stored on this Mac and may contain anything you printed, so turn this off if you handle secrets.") {
@@ -286,21 +307,38 @@ private struct DataSection: View {
 
 private struct ShortcutsSection: View {
     @Environment(\.theme) private var theme
-    private let items: [(String, String)] = [
-        ("New tab", "⌘T"), ("Close tab", "⌘W"), ("New workspace", "⇧⌘N"), ("Switch workspace", "⌃⌘1–9"),
-        ("Command palette", "⌘K"), ("Pane layout", "⌥⌘L"), ("Move between panes", "⌘← ↑ ↓ →"), ("Command history", "⇧⌘H"), ("Settings", "⌘,")
+    private let groups: [(String, [(String, String)])] = [
+        ("Tabs and workspaces", [
+            ("New tab", "⌘T"), ("Close tab", "⌘W"), ("New workspace", "⇧⌘N"), ("Switch workspace", "⌃⌘1–9"),
+            ("Close tab with middle-click", "middle-click"), ("Rename tab", "double-click")]),
+        ("Panes", [
+            ("Split right", "⌘D"), ("Split down", "⇧⌘D"), ("Move between panes", "⌘← ↑ ↓ →"),
+            ("Pane layout", "⌥⌘L"), ("Broadcast typing to all panes", "⌥⌘I"), ("Swap two panes", "drag header")]),
+        ("Search and history", [
+            ("Command palette", "⌘K"), ("Palette: Actions ⇄ Commands", "← →"), ("Command history (this tab)", "⇧⌘H"),
+            ("Find in terminal", "⌘F"), ("Find next / previous", "⌘G / ⇧⌘G")]),
+        ("Terminal", [
+            ("Copy last command output", "⌥⌘C"), ("Bigger / smaller text", "⌘+ / ⌘−"),
+            ("Quick terminal", "⌃` (changeable)"), ("Open a link", "click or ⌘-click"), ("Settings", "⌘,")])
     ]
 
     var body: some View {
-        SettingsSection(title: "Shortcuts", subtitle: "Keyboard shortcuts") {
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 8) {
-                ForEach(items, id: \.0) { item in
-                    HStack {
-                        Text(item.0).font(.system(size: 12.5))
-                        Spacer()
-                        Text(item.1).font(.system(size: 11.5, design: .rounded)).foregroundStyle(theme.muted)
-                            .padding(.horizontal, 7).padding(.vertical, 2)
-                            .background(theme.track, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+        SettingsSection(title: "Shortcuts", subtitle: "Keyboard and mouse shortcuts") {
+            VStack(alignment: .leading, spacing: 14) {
+                ForEach(groups, id: \.0) { group in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(group.0.uppercased()).font(.system(size: 10.5, weight: .semibold)).foregroundStyle(theme.faint)
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 8) {
+                            ForEach(group.1, id: \.0) { item in
+                                HStack {
+                                    Text(item.0).font(.system(size: 12.5))
+                                    Spacer()
+                                    Text(item.1).font(.system(size: 11.5, design: .rounded)).foregroundStyle(theme.muted)
+                                        .padding(.horizontal, 7).padding(.vertical, 2)
+                                        .background(theme.track, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                                }
+                            }
+                        }
                     }
                 }
             }

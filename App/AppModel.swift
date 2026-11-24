@@ -32,6 +32,7 @@ final class AppModel {
     var runningTabs: Set<UUID> = []
     var failedTabs: Set<UUID> = []
     /// Find bar (⌘F) for the active pane.
+    var quickStatus = ""
     var findOpen = false
     var findQuery = ""
     var findMissed = false
@@ -72,11 +73,18 @@ final class AppModel {
     }
 
     // MARK: Derived
-    var theme: Theme { Theme.named(state.themeID) }
+    /// Built in themes plus imported ones. Reads the saved state, so views using it update when one is added or removed.
+    var allThemes: [Theme] { Theme.all + state.customThemes.map(Theme.init(custom:)) }
+    var theme: Theme { allThemes.first { $0.id == state.themeID } ?? Theme.all[0] }
+    /// The imported theme in use, if any. Those have one look (light or dark), so they decide the appearance.
+    var activeCustomTheme: CustomTheme? { state.customThemes.first { "custom-" + $0.id == state.themeID } }
     /// Applies System / Light / Dark to the whole app. `NSApp.appearance = nil` is what makes "System" follow macOS
     /// again; SwiftUI's `preferredColorScheme(nil)` does not undo an earlier Light or Dark choice.
     func applyAppearance() {
-        switch state.themeMode {
+        // An imported theme is either light or dark; forcing the matching appearance keeps text readable
+        // (a dark theme under a light Mac used to give black text on a dark window).
+        let mode = activeCustomTheme.map { $0.isDark ? ThemeMode.dark : ThemeMode.light } ?? state.themeMode
+        switch mode {
         case .system: NSApp.appearance = nil
         case .light: NSApp.appearance = NSAppearance(named: .aqua)
         case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
@@ -261,8 +269,11 @@ final class AppModel {
             onExit: { [weak self] _ in self?.restart(tab: id) },
             onFocus: { [weak self] in self?.focusTab(id) },
             onRunning: { [weak self] running in self?.setRunning(running, tab: id) },
-            onReady: { [weak self] in self?.runStartupCommand(tab: id) }))
+            onReady: { [weak self] in self?.runStartupCommand(tab: id) },
+            rightClickCopies: { [weak self] in self?.state.rightClickCopies ?? false },
+            onMenu: { [weak self] action in self?.menuAction(action, tab: id) }))
         s.onInput = { [weak self] data in self?.mirror(data, from: id) }
+        s.onPaste = { [weak self] in self?.mirrorPaste(from: id) }
         sessions[id] = s
         if let cmd = tab.startupCommand, !cmd.isEmpty {
             // Template tabs: wait for the shell's first prompt (so slow or interactive start-up files don't swallow
@@ -412,6 +423,23 @@ final class AppModel {
         for t in ws.tabs where t.id != id { sessions[t.id]?.sendRaw(data) }
     }
 
+    private func mirrorPaste(from id: UUID) {
+        guard let ws = state.workspaces.first(where: { $0.tabs.contains { $0.id == id } }),
+              ws.broadcast, ws.activeTabID == id else { return }
+        for t in ws.tabs where t.id != id { sessions[t.id]?.replayPaste() }
+    }
+
+    /// Items of a terminal's right-click menu that act on the app.
+    private func menuAction(_ action: TerminalMenuAction, tab id: UUID) {
+        select(tab: id)
+        switch action {
+        case .find: openFind()
+        case .splitRight: split(.right)
+        case .splitDown: split(.down)
+        case .copyLastOutput: copyLastOutput(from: sessions[id])
+        }
+    }
+
     // MARK: Find
 
     func openFind() { route = .terminal; findOpen = true }
@@ -510,11 +538,12 @@ final class AppModel {
     }
 
     /// Commands matching `query` from all tabs of all workspaces, newest first.
+    /// An empty `query` returns the most recent commands.
     func searchAllHistory(_ query: String, limit: Int = 30) -> [HistoryHit] {
         var hits: [HistoryHit] = []
         for ws in state.workspaces {
             for tab in ws.tabs {
-                for e in store.history(tab: tab.id, limit: 60, matching: query) {
+                for e in store.history(tab: tab.id, limit: max(limit, 30), matching: query.isEmpty ? nil : query) {
                     hits.append(HistoryHit(tab: tab, workspace: ws.name, entry: e))
                 }
             }
@@ -543,7 +572,12 @@ final class AppModel {
 
     func setQuickTerminal(_ on: Bool) {
         state.quickTerminalEnabled = on
-        if on { QuickTerminal.shared.start(model: self) } else { QuickTerminal.shared.stop() }
+        if on { QuickTerminal.shared.start(model: self) } else { QuickTerminal.shared.stop(); quickStatus = "" }
+    }
+
+    func setQuickHotkey(_ raw: String) {
+        state.quickTerminalHotkey = raw
+        if state.quickTerminalEnabled { QuickTerminal.shared.restart(model: self) }
     }
 
     /// `--smoke-test <file>`: used by CI. Runs a command in the first terminal and writes PASS or FAIL to the file.

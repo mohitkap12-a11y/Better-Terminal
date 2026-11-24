@@ -9,7 +9,10 @@ private struct PaletteItem: Identifiable {
     let action: () -> Void
 }
 
-/// ⌘K: actions, workspaces, layouts, themes and history.
+private enum PaletteTab: String, CaseIterable { case actions = "Actions", commands = "Commands" }
+
+/// ⌘K. Actions tab: your last three commands, then actions, workspaces, layouts and themes.
+/// Commands tab (press →): the last 30 commands from every terminal, searchable. ← goes back.
 struct CommandPalette: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
@@ -17,9 +20,22 @@ struct CommandPalette: View {
     @State private var query = ""
     @State private var selection = 0
     @State private var hits: [AppModel.HistoryHit] = []
+    @State private var recent: [AppModel.HistoryHit] = []
+    @State private var tab: PaletteTab = .actions
     @FocusState private var focused: Bool
 
+    private func commandItem(_ h: AppModel.HistoryHit, subtitlePrefix: String = "") -> PaletteItem {
+        PaletteItem(title: h.entry.command,
+                    subtitle: subtitlePrefix + "\(h.workspace) › \(h.tab.title)",
+                    symbol: h.entry.failed ? "exclamationmark.circle" : "clock") {
+            dismiss(); model.use(h, run: NSEvent.modifierFlags.contains(.command))
+        }
+    }
+
     private var items: [PaletteItem] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        if tab == .commands { return hits.map { commandItem($0) } }
+
         var all: [PaletteItem] = []
         func add(_ t: String, _ sub: String = "", _ sym: String, _ a: @escaping () -> Void) {
             all.append(PaletteItem(title: t, subtitle: sub, symbol: sym, action: { dismiss(); a() }))
@@ -31,6 +47,7 @@ struct CommandPalette: View {
         add("Find in Terminal", "⌘F", "magnifyingglass") { model.openFind() }
         add(model.active?.broadcast == true ? "Stop Broadcasting Input" : "Broadcast Input to All Panes", "⌥⌘I", "dot.radiowaves.left.and.right") { model.toggleBroadcast() }
         add("Copy Last Command Output", "⌥⌘C", "doc.on.clipboard") { model.copyLastOutput() }
+        add("Quick Terminal", "", "chevron.down.square") { QuickTerminal.shared.toggle() }
         add("Save Workspace as Template", "", "square.and.arrow.down") { model.saveTemplate() }
         for t in model.state.templates { add("New Workspace from “\(t.name)”", t.layout.label, "rectangle.stack.badge.plus") { model.newWorkspace(from: t) } }
         add("Show Command History", "⇧⌘H", "clock.arrow.circlepath") { model.toggleHistory() }
@@ -43,70 +60,92 @@ struct CommandPalette: View {
         for l in PaneLayout.presets {
             add("Layout \(l.label)", "rows × columns", "square.grid.2x2") { model.setLayout(l) }
         }
-        for t in Theme.everything { add("Theme: \(t.name)", "", "paintpalette") { model.useTheme(t.id) } }
+        for t in model.allThemes { add("Theme: \(t.name)", "", "paintpalette") { model.useTheme(t.id) } }
         for m in ThemeMode.allCases { add("Appearance: \(m.rawValue.capitalized)", "", "circle.lefthalf.filled") { model.state.themeMode = m } }
 
-        let q = query.trimmingCharacters(in: .whitespaces)
-        var out = q.isEmpty ? all : all.filter { $0.title.localizedCaseInsensitiveContains(q) }
-        if !q.isEmpty {
-            // Search every tab in every workspace; ⏎ puts the command at that tab's prompt, ⌘⏎ runs it.
-            for h in hits {
-                out.append(PaletteItem(title: h.entry.command,
-                                       subtitle: "\(h.workspace) › \(h.tab.title)",
-                                       symbol: h.entry.failed ? "exclamationmark.circle" : "clock") {
-                    dismiss(); model.use(h, run: NSEvent.modifierFlags.contains(.command))
-                })
-            }
-            return out
-        }
-        for e in model.recentHistory().filter({ _ in true }).prefix(5) {
-            out.append(PaletteItem(title: e.command,
-                                   subtitle: "history · " + e.cwd.replacingOccurrences(of: NSHomeDirectory(), with: "~"),
-                                   symbol: e.failed ? "exclamationmark.circle" : "clock") {
-                dismiss(); model.route = .terminal; model.activeSession()?.insert(e.command)
-            })
-        }
-        return out
+        if !q.isEmpty { return all.filter { $0.title.localizedCaseInsensitiveContains(q) } }
+        // Nothing typed: your three most recent commands first.
+        return recent.map { commandItem($0, subtitlePrefix: "recent · ") } + all
     }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: Metrics.s2) {
                 Image(systemName: "command").foregroundStyle(theme.muted)
-                TextField("Type a command or search history", text: $query)
+                TextField(tab == .actions ? "Type an action, or press → for recent commands" : "Search commands from all terminals",
+                          text: $query)
                     .textFieldStyle(.plain).font(.title3).focused($focused)
                     .onSubmit { run(selection) }
                     .onChange(of: query) { selection = 0 }
-                    .task(id: query) {
-                        let q = query.trimmingCharacters(in: .whitespaces)
-                        hits = q.isEmpty ? [] : model.searchAllHistory(q)
-                    }
-                    .onKeyPress(.downArrow) { selection = min(selection + 1, max(items.count - 1, 0)); return .handled }
-                    .onKeyPress(.upArrow) { selection = max(selection - 1, 0); return .handled }
+                    .onChange(of: tab) { selection = 0 }
+                    .task(id: "\(tab.rawValue)|\(query)") { await reload() }
+                    .onKeyPress(.downArrow) { move(1); return .handled }
+                    .onKeyPress(.upArrow) { move(-1); return .handled }
+                    .onKeyPress(.rightArrow) { tab = .commands; return .handled }
+                    .onKeyPress(.leftArrow) { tab = .actions; return .handled }
                     .onKeyPress(.escape) { dismiss(); return .handled }
             }
             .padding(Metrics.s4)
-            Divider()
-            ScrollViewReader { proxy in
-                List(Array(items.enumerated()), id: \.element.id) { i, item in
-                    HStack(spacing: Metrics.s3) {
-                        Image(systemName: item.symbol).frame(width: 20).foregroundStyle(theme.muted)
-                        Text(item.title).lineLimit(1).truncationMode(.middle)
-                        Spacer()
-                        Text(item.subtitle).font(.caption).foregroundStyle(theme.faint).lineLimit(1)
+            HStack(spacing: 6) {
+                ForEach(PaletteTab.allCases, id: \.self) { t in
+                    Button { tab = t } label: {
+                        Text(t.rawValue).font(.system(size: 12, weight: tab == t ? .semibold : .regular))
+                            .padding(.horizontal, 10).padding(.vertical, 4)
+                            .background(tab == t ? theme.selection : Color.clear, in: Capsule())
+                            .foregroundStyle(tab == t ? Color.primary : theme.muted)
                     }
-                    .padding(.vertical, 2)
-                    .contentShape(Rectangle())
-                    .listRowBackground(i == selection ? theme.selection : Color.clear)
-                    .onTapGesture { run(i) }
-                    .id(i)
+                    .buttonStyle(.plain)
                 }
-                .listStyle(.plain)
-                .onChange(of: selection) { proxy.scrollTo(selection) }
+                Spacer()
+                Text(tab == .actions ? "→ commands" : "← actions").font(.caption).foregroundStyle(theme.faint)
+            }
+            .padding(.horizontal, Metrics.s4).padding(.bottom, Metrics.s2)
+            Divider()
+            if items.isEmpty {
+                ContentUnavailableView(tab == .commands ? "No commands yet" : "No matches",
+                                       systemImage: tab == .commands ? "clock" : "magnifyingglass")
+                    .frame(maxHeight: .infinity)
+            } else {
+                ScrollViewReader { proxy in
+                    List(Array(items.enumerated()), id: \.element.id) { i, item in
+                        HStack(spacing: Metrics.s3) {
+                            Image(systemName: item.symbol).frame(width: 20).foregroundStyle(theme.muted)
+                            Text(item.title).lineLimit(1).truncationMode(.middle)
+                                .font(tab == .commands ? .system(.body, design: .monospaced) : .body)
+                            Spacer()
+                            Text(item.subtitle).font(.caption).foregroundStyle(theme.faint).lineLimit(1)
+                        }
+                        .padding(.vertical, 2)
+                        .contentShape(Rectangle())
+                        .listRowBackground(i == selection ? theme.selection : Color.clear)
+                        .onTapGesture { run(i) }
+                        .id(i)
+                    }
+                    .listStyle(.plain)
+                    .onChange(of: selection) { proxy.scrollTo(selection) }
+                }
+            }
+            if tab == .commands {
+                Divider()
+                Text("⏎ puts the command at that tab's prompt · ⌘⏎ runs it")
+                    .font(.caption).foregroundStyle(theme.faint).padding(.vertical, 6)
             }
         }
-        .frame(width: 560, height: 400)
+        .frame(width: 600, height: 440)
         .onAppear { focused = true }
+    }
+
+    /// Up from the first row goes to the last, down from the last goes to the first.
+    private func move(_ delta: Int) {
+        let n = items.count
+        guard n > 0 else { return }
+        selection = (selection + delta + n) % n
+    }
+
+    private func reload() async {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        recent = model.searchAllHistory("", limit: 3)
+        hits = tab == .commands ? model.searchAllHistory(q, limit: 30) : []
     }
 
     private func run(_ i: Int) {

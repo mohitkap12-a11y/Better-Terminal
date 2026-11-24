@@ -1,6 +1,35 @@
 import AppKit
 import Carbon.HIToolbox
 
+/// Keys the quick terminal can be opened with. Pick another if the default clashes with something on your Mac.
+enum QuickHotkey: String, CaseIterable, Identifiable {
+    case ctrlGrave, optSpace, ctrlOptSpace, f12
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .ctrlGrave: return "⌃`  (control + backtick)"
+        case .optSpace: return "⌥Space"
+        case .ctrlOptSpace: return "⌃⌥Space"
+        case .f12: return "F12"
+        }
+    }
+    var keyCode: UInt32 {
+        switch self {
+        case .ctrlGrave: return UInt32(kVK_ANSI_Grave)
+        case .optSpace, .ctrlOptSpace: return UInt32(kVK_Space)
+        case .f12: return UInt32(kVK_F12)
+        }
+    }
+    var modifiers: UInt32 {
+        switch self {
+        case .ctrlGrave: return UInt32(controlKey)
+        case .optSpace: return UInt32(optionKey)
+        case .ctrlOptSpace: return UInt32(controlKey | optionKey)
+        case .f12: return 0
+        }
+    }
+}
+
 /// Drop-down terminal on a global hotkey (⌃`). Not part of any workspace; its shell is kept while the app runs.
 @MainActor
 final class QuickTerminal {
@@ -19,15 +48,26 @@ final class QuickTerminal {
     func start(model: AppModel) {
         self.model = model
         guard hotKey == nil else { return }
+        let key = QuickHotkey(rawValue: model.state.quickTerminalHotkey) ?? .ctrlGrave
         var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
         InstallEventHandler(GetApplicationEventTarget(), { _, _, _ in
             DispatchQueue.main.async { QuickTerminal.shared.toggle() }
             return noErr
         }, 1, &spec, nil, &handler)
         let id = EventHotKeyID(signature: OSType(0x42544B59), id: 1)
-        let status = RegisterEventHotKey(UInt32(kVK_ANSI_Grave), UInt32(controlKey), id, GetApplicationEventTarget(), 0, &hotKey)
-        if status != noErr { Diagnostics.log("quick terminal hotkey registration failed: \(status)") }
+        let status = RegisterEventHotKey(key.keyCode, key.modifiers, id, GetApplicationEventTarget(), 0, &hotKey)
+        if status == noErr {
+            model.quickStatus = "Listening for \(key.label)"
+            Diagnostics.log("quick terminal hotkey registered: \(key.rawValue)")
+        } else {
+            hotKey = nil
+            model.quickStatus = "Could not register \(key.label) (error \(status)). Try another key."
+            Diagnostics.log("quick terminal hotkey registration failed: \(key.rawValue) status \(status)")
+        }
     }
+
+    /// Re-registers after the hotkey setting changed.
+    func restart(model: AppModel) { stop(); start(model: model) }
 
     func stop() {
         if let hotKey { UnregisterEventHotKey(hotKey) }
@@ -37,7 +77,8 @@ final class QuickTerminal {
         session?.terminate(); session = nil
     }
 
-    private func toggle() {
+    func toggle() {
+        Diagnostics.log("quick terminal toggled")
         if let panel, panel.isVisible, panel.isKeyWindow { hide() } else { show() }
     }
 

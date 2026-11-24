@@ -175,6 +175,10 @@ public struct AppState: Codable, Sendable {
     public var customThemes: [CustomTheme] = []
     /// Global hotkey (⌃`) that drops a terminal down from the top of the screen.
     public var quickTerminalEnabled: Bool = false
+    /// Which key opens the quick terminal (see `QuickHotkey` in the app).
+    public var quickTerminalHotkey: String = "ctrlGrave"
+    /// Right-click on selected text copies it at once instead of showing the menu.
+    public var rightClickCopies: Bool = false
 
     public init(workspaces: [Workspace] = [], activeWorkspaceID: UUID? = nil) {
         self.workspaces = workspaces
@@ -197,6 +201,8 @@ public struct AppState: Codable, Sendable {
         templates = try c.decodeIfPresent([WorkspaceTemplate].self, forKey: .templates) ?? []
         customThemes = try c.decodeIfPresent([CustomTheme].self, forKey: .customThemes) ?? []
         quickTerminalEnabled = try c.decodeIfPresent(Bool.self, forKey: .quickTerminalEnabled) ?? false
+        quickTerminalHotkey = try c.decodeIfPresent(String.self, forKey: .quickTerminalHotkey) ?? "ctrlGrave"
+        rightClickCopies = try c.decodeIfPresent(Bool.self, forKey: .rightClickCopies) ?? false
     }
 
     public static func fresh() -> AppState {
