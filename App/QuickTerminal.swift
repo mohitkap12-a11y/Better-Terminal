@@ -45,15 +45,24 @@ final class QuickTerminal {
     private var hotKey: EventHotKeyRef?
     private var handler: EventHandlerRef?
 
+    /// Lets the quick terminal open on demand (palette, "Show now") even when its hotkey is off.
+    func attach(model: AppModel) { self.model = model }
+
     func start(model: AppModel) {
-        self.model = model
-        guard hotKey == nil else { return }
+        attach(model: model)
+        if handler == nil {
+            var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+            InstallEventHandler(GetApplicationEventTarget(), { _, _, _ in
+                DispatchQueue.main.async { QuickTerminal.shared.toggle() }
+                return noErr
+            }, 1, &spec, nil, &handler)
+        }
+        registerHotKey()
+    }
+
+    private func registerHotKey() {
+        guard hotKey == nil, let model else { return }
         let key = QuickHotkey(rawValue: model.state.quickTerminalHotkey) ?? .ctrlGrave
-        var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-        InstallEventHandler(GetApplicationEventTarget(), { _, _, _ in
-            DispatchQueue.main.async { QuickTerminal.shared.toggle() }
-            return noErr
-        }, 1, &spec, nil, &handler)
         let id = EventHotKeyID(signature: OSType(0x42544B59), id: 1)
         let status = RegisterEventHotKey(key.keyCode, key.modifiers, id, GetApplicationEventTarget(), 0, &hotKey)
         if status == noErr {
@@ -66,9 +75,15 @@ final class QuickTerminal {
         }
     }
 
-    /// Re-registers after the hotkey setting changed.
-    func restart(model: AppModel) { stop(); start(model: model) }
+    /// Moves the hotkey to the newly chosen key. The panel and its shell are left alone.
+    func restart(model: AppModel) {
+        attach(model: model)
+        if let hotKey { UnregisterEventHotKey(hotKey) }
+        hotKey = nil
+        registerHotKey()
+    }
 
+    /// Turns the hotkey off and ends the quick terminal's shell.
     func stop() {
         if let hotKey { UnregisterEventHotKey(hotKey) }
         if let handler { RemoveEventHandler(handler) }

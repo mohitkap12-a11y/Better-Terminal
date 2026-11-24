@@ -57,6 +57,7 @@ final class AppModel {
         Theme.custom = state.customThemes.map(Theme.init(custom:))
         if state.notifyLongCommands { Notifier.shared.requestAuthorization() }
         Notifier.shared.onOpenTab = { [weak self] id in self?.select(tab: id); NSApp.activate(ignoringOtherApps: true) }
+        QuickTerminal.shared.attach(model: self)
         if state.quickTerminalEnabled { QuickTerminal.shared.start(model: self) }
         if let i = CommandLine.arguments.firstIndex(of: "--smoke-test") {
             let out = CommandLine.arguments.indices.contains(i + 1) ? CommandLine.arguments[i + 1] : "/tmp/bt-smoke.txt"

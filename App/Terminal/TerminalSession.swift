@@ -169,7 +169,10 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
 
         // Typed keys, for broadcasting to other panes. Only while this terminal has the keyboard.
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self, let handler = self.onInput, self.view.window?.firstResponder === self.view,
+            // Monitors see every key in the app, so also require the event to belong to this terminal's window
+            // (typing in the quick terminal must not reach the main window's panes).
+            guard let self, let handler = self.onInput, let window = self.view.window, event.window === window,
+                  window.firstResponder === self.view,
                   let bytes = KeyBytes.bytes(for: event) else { return event }
             handler(bytes[...])
             return event
