@@ -153,7 +153,7 @@ struct TabContextMenu: ViewModifier {
             }
             Divider()
             Button("Close Tab", role: .destructive) { model.closeTab(tab.id) }
-                .disabled((model.active?.tabs.count ?? 0) < 2)
+                .disabled(!model.canCloseTab(tab.id))
         }
     }
 }
