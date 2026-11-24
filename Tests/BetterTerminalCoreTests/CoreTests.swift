@@ -381,3 +381,113 @@ final class EffectiveLayoutTests: XCTestCase {
         XCTAssertTrue(try JSONDecoder().decode(AppState.self, from: old).confirmCloseRunning)
     }
 }
+
+
+final class BatchFeatureTests: XCTestCase {
+    func testSplitRightGrowsColumnsAndInsertsAfterActive() {
+        var ws = Workspace(name: "w"); ws.addTab(); ws.addTab()           // 1x1 layout, 2 tabs, last active
+        ws.activeTabID = ws.tabs[0].id
+        let t = ws.split(.right)
+        XCTAssertEqual(ws.tabs[1].id, t.id)
+        XCTAssertEqual(ws.activeTabID, t.id)
+        XCTAssertEqual(ws.layout, PaneLayout(rows: 1, columns: 3))
+    }
+
+    func testSplitDownFromSinglePane() {
+        var ws = Workspace(name: "w"); ws.addTab()
+        ws.split(.down)
+        XCTAssertEqual(ws.layout, PaneLayout(rows: 2, columns: 1))
+        ws.split(.right)                                                  // 2x1 + 3rd tab -> grid grows
+        XCTAssertGreaterThanOrEqual(ws.layout.capacity, 3)
+    }
+
+    func testGrowingNeverExceedsMax() {
+        let l = PaneLayout(rows: 6, columns: 6)
+        XCTAssertEqual(l.growing(toFit: 40, along: .right), l)
+    }
+
+    func testSwapTabs() {
+        var s = AppState.fresh()
+        s.workspaces[0].addTab(); s.workspaces[0].addTab()
+        let ids = s.workspaces[0].tabs.map(\.id)
+        XCTAssertTrue(s.swapTabs(ids[0], ids[2]))
+        XCTAssertEqual(s.workspaces[0].tabs.map(\.id), [ids[2], ids[1], ids[0]])
+        XCTAssertFalse(s.swapTabs(ids[0], ids[0]))
+    }
+
+    func testTemplateRoundTrip() {
+        var ws = Workspace(name: "Dev", layout: PaneLayout(rows: 1, columns: 2)); ws.addTab(cwd: "/a"); ws.addTab(cwd: "/b")
+        var tpl = ws.asTemplate(named: "Dev setup")
+        tpl.tabs[1].command = "npm run dev"
+        let made = tpl.makeWorkspace(colorHex: "#FFFFFF")
+        XCTAssertEqual(made.tabs.map(\.cwd), ["/a", "/b"])
+        XCTAssertNil(made.tabs[0].startupCommand)
+        XCTAssertEqual(made.tabs[1].startupCommand, "npm run dev")
+        XCTAssertEqual(made.layout, ws.layout)
+        XCTAssertNotEqual(made.id, ws.id)
+    }
+
+    func testOldStateStillDecodes() throws {
+        let json = #"{"workspaces":[{"id":"\#(UUID().uuidString)","name":"A","colorHex":"x","layout":{"rows":1,"columns":1},"tabs":[]}]}"#
+        let s = try JSONDecoder().decode(AppState.self, from: json.data(using: .utf8)!)
+        XCTAssertFalse(s.workspaces[0].broadcast)
+        XCTAssertTrue(s.templates.isEmpty)
+        XCTAssertEqual(s.terminalFontFamily, "")
+        XCTAssertTrue(s.notifyLongCommands)
+    }
+
+    func testHexNormalizing() {
+        XCTAssertEqual(ThemeImport.normalizeHex("#abc"), "#AABBCC")
+        XCTAssertEqual(ThemeImport.normalizeHex("0x1e1e2e"), "#1E1E2E")
+        XCTAssertEqual(ThemeImport.normalizeHex("rgb:ff/00/80"), "#FF0080")
+        XCTAssertNil(ThemeImport.normalizeHex("zzz"))
+    }
+
+    func testParseGhosttyStyle() {
+        let text = """
+        # comment
+        background = #1e1e2e
+        foreground = cdd6f4
+        palette = 0=#45475a
+        palette = 4=#89b4fa
+        """
+        let t = ThemeImport.parseKeyValue(text, name: "Mocha")
+        XCTAssertEqual(t?.background, "#1E1E2E")
+        XCTAssertEqual(t?.foreground, "#CDD6F4")
+        XCTAssertEqual(t?.accent, "#89B4FA")
+        XCTAssertEqual(t?.isDark, true)
+        XCTAssertNil(ThemeImport.parseKeyValue("nothing here", name: "x"))
+    }
+
+    func testParseKittyStyle() {
+        let t = ThemeImport.parseKeyValue("background #ffffff\nforeground #000000\ncolor4 #0000ff", name: "Light")
+        XCTAssertEqual(t?.accent, "#0000FF")
+        XCTAssertEqual(t?.isDark, false)
+    }
+
+    func testParseITerm() {
+        func comp(_ r: Double, _ g: Double, _ b: Double) -> String {
+            "<dict><key>Red Component</key><real>\(r)</real><key>Green Component</key><real>\(g)</real><key>Blue Component</key><real>\(b)</real></dict>"
+        }
+        let xml = """
+        <?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict>
+        <key>Background Color</key>\(comp(0, 0, 0))
+        <key>Foreground Color</key>\(comp(1, 1, 1))
+        </dict></plist>
+        """
+        let t = ThemeImport.parse(xml.data(using: .utf8)!, name: "Black")
+        XCTAssertEqual(t?.background, "#000000")
+        XCTAssertEqual(t?.foreground, "#FFFFFF")
+    }
+
+    func testShift() {
+        XCTAssertEqual(ThemeImport.shifted("#000000", by: 0.5), "#808080")
+        XCTAssertEqual(ThemeImport.shifted("#FFFFFF", by: -1), "#000000")
+    }
+
+    func testCommandOutput() {
+        XCTAssertEqual(CommandOutput.since("$ ls\nfile1\nfile2\n", startLength: 5), "file1\nfile2")
+        XCTAssertNil(CommandOutput.since("short", startLength: 50))
+        XCTAssertNil(CommandOutput.since("abc", startLength: 3))
+    }
+}
