@@ -16,6 +16,7 @@ struct CommandPalette: View {
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
     @State private var selection = 0
+    @State private var hits: [AppModel.HistoryHit] = []
     @FocusState private var focused: Bool
 
     private var items: [PaletteItem] {
@@ -25,6 +26,13 @@ struct CommandPalette: View {
         }
         add("New Tab", "⌘T", "plus.square") { model.newTab() }
         add("New Workspace", "⇧⌘N", "rectangle.stack.badge.plus") { model.addWorkspace() }
+        add("Split Right", "⌘D", "rectangle.split.2x1") { model.split(.right) }
+        add("Split Down", "⇧⌘D", "rectangle.split.1x2") { model.split(.down) }
+        add("Find in Terminal", "⌘F", "magnifyingglass") { model.openFind() }
+        add(model.active?.broadcast == true ? "Stop Broadcasting Input" : "Broadcast Input to All Panes", "⌥⌘I", "dot.radiowaves.left.and.right") { model.toggleBroadcast() }
+        add("Copy Last Command Output", "⌥⌘C", "doc.on.clipboard") { model.copyLastOutput() }
+        add("Save Workspace as Template", "", "square.and.arrow.down") { model.saveTemplate() }
+        for t in model.state.templates { add("New Workspace from “\(t.name)”", t.layout.label, "rectangle.stack.badge.plus") { model.newWorkspace(from: t) } }
         add("Show Command History", "⇧⌘H", "clock.arrow.circlepath") { model.toggleHistory() }
         add("Settings", "⌘,", "gearshape") { model.route = .settings }
         add("Show Walkthrough", "", "sparkles") { model.walkthroughOpen = true }
@@ -35,12 +43,23 @@ struct CommandPalette: View {
         for l in PaneLayout.presets {
             add("Layout \(l.label)", "rows × columns", "square.grid.2x2") { model.setLayout(l) }
         }
-        for t in Theme.all { add("Theme: \(t.name)", "", "paintpalette") { model.state.themeID = t.id } }
+        for t in Theme.everything { add("Theme: \(t.name)", "", "paintpalette") { model.useTheme(t.id) } }
         for m in ThemeMode.allCases { add("Appearance: \(m.rawValue.capitalized)", "", "circle.lefthalf.filled") { model.state.themeMode = m } }
 
         let q = query.trimmingCharacters(in: .whitespaces)
         var out = q.isEmpty ? all : all.filter { $0.title.localizedCaseInsensitiveContains(q) }
-        for e in model.recentHistory().filter({ q.isEmpty || $0.command.localizedCaseInsensitiveContains(q) }).prefix(q.isEmpty ? 5 : 12) {
+        if !q.isEmpty {
+            // Search every tab in every workspace; ⏎ puts the command at that tab's prompt, ⌘⏎ runs it.
+            for h in hits {
+                out.append(PaletteItem(title: h.entry.command,
+                                       subtitle: "\(h.workspace) › \(h.tab.title)",
+                                       symbol: h.entry.failed ? "exclamationmark.circle" : "clock") {
+                    dismiss(); model.use(h, run: NSEvent.modifierFlags.contains(.command))
+                })
+            }
+            return out
+        }
+        for e in model.recentHistory().filter({ _ in true }).prefix(5) {
             out.append(PaletteItem(title: e.command,
                                    subtitle: "history · " + e.cwd.replacingOccurrences(of: NSHomeDirectory(), with: "~"),
                                    symbol: e.failed ? "exclamationmark.circle" : "clock") {
@@ -58,6 +77,10 @@ struct CommandPalette: View {
                     .textFieldStyle(.plain).font(.title3).focused($focused)
                     .onSubmit { run(selection) }
                     .onChange(of: query) { selection = 0 }
+                    .task(id: query) {
+                        let q = query.trimmingCharacters(in: .whitespaces)
+                        hits = q.isEmpty ? [] : model.searchAllHistory(q)
+                    }
                     .onKeyPress(.downArrow) { selection = min(selection + 1, max(items.count - 1, 0)); return .handled }
                     .onKeyPress(.upArrow) { selection = max(selection - 1, 0); return .handled }
                     .onKeyPress(.escape) { dismiss(); return .handled }

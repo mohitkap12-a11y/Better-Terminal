@@ -119,6 +119,7 @@ struct Sidebar: View {
                 } isTargeted: { targetedWorkspace = $0 ? ws.id : (targetedWorkspace == ws.id ? nil : targetedWorkspace) }
                 .contextMenu {
                     Button("New Terminal") { model.newTab(in: ws.id) }
+                    Button("Save as Template") { model.saveTemplate(from: ws.id) }
                     Divider()
                     Button("Rename…") { newName = ws.name; renaming = ws }
                     Menu("Color") {
@@ -286,6 +287,7 @@ private struct SidebarTabRow: View {
             Text(tab.title).font(.system(size: 12, weight: selected ? .medium : .regular))
                 .foregroundStyle(selected ? Color.primary : theme.muted).lineLimit(1)
             Spacer(minLength: 0)
+            TabStatusBadge(id: tab.id, selected: selected)
         }
         .padding(.leading, 40).padding(.trailing, 10)
         .frame(height: 26)

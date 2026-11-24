@@ -9,18 +9,31 @@ struct PaneView: View {
     let tab: TerminalTab
     let focused: Bool
     @State private var pulse: Double = 0
+    @State private var paneDropTarget = false
 
     var body: some View {
         let session = model.session(for: tab)
         VStack(spacing: 0) {
             header(session)
             Divider()
-            TerminalHost(session: session, theme: theme, scheme: scheme, fontSize: model.state.terminalFontSize)
+            TerminalHost(session: session, theme: theme, scheme: scheme, fontSize: model.state.terminalFontSize,
+                         fontFamily: model.state.terminalFontFamily)
         }
         .background(theme.terminalBackground(scheme))
         .overlay(alignment: .top) {
             if focused { Rectangle().fill(theme.accent).frame(height: 2) }
         }
+        .overlay(alignment: .topTrailing) {
+            if focused && model.findOpen { FindBar().padding(.top, 36).padding(.trailing, Metrics.s3) }
+        }
+        .overlay {
+            if paneDropTarget {
+                RoundedRectangle(cornerRadius: 4).strokeBorder(theme.accent, lineWidth: 3).allowsHitTesting(false)
+            }
+        }
+        .dropDestination(for: String.self) { items, _ in
+            model.handleDrop(items, ontoPane: tab.id)
+        } isTargeted: { paneDropTarget = $0 }
         .overlay {
             // Subtle highlight when you arrive here with ⌘+arrow: a soft wash and an accent edge that fade out.
             ZStack {
@@ -41,9 +54,21 @@ struct PaneView: View {
 
     private func header(_ session: TerminalSession) -> some View {
         HStack(spacing: Metrics.s2) {
+            Image(systemName: "line.3.horizontal").font(.system(size: 9)).foregroundStyle(.tertiary)
+                .help("Drag onto another pane to swap them")
             Text(tab.cwd.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
                 .font(.caption).foregroundStyle(.secondary)
                 .lineLimit(1).truncationMode(.middle)
+                .contextMenu {
+                    Button("Reveal in Finder") { model.revealInFinder(tab.cwd) }
+                    if model.hasEditor { Button("Open in VS Code") { model.openInEditor(tab.cwd) } }
+                    Button("Copy Path") {
+                        NSPasteboard.general.clearContents(); NSPasteboard.general.setString(tab.cwd, forType: .string)
+                    }
+                    Divider()
+                    Button("Copy Last Output") { model.copyLastOutput() }
+                }
+            TabStatusBadge(id: tab.id, selected: focused)
             Spacer()
             Button { model.historyOpenTab = (model.historyOpenTab == tab.id ? nil : tab.id) } label: {
                 Image(systemName: "clock.arrow.circlepath")
@@ -64,7 +89,8 @@ struct PaneView: View {
         .padding(.horizontal, Metrics.s3)
         .frame(height: 28)
         .contentShape(Rectangle())
-        .onTapGesture { model.mutateActive { $0.activeTabID = tab.id }; session.focus() }
+        .onTapGesture { model.mutateActive { $0.activeTabID = tab.id }; model.failedTabs.remove(tab.id); session.focus() }
+        .draggable(AppModel.panePayload(tab.id))
         .onMiddleClick { model.requestCloseTab(tab.id) }
     }
 }

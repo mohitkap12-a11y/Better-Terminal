@@ -10,8 +10,17 @@ protocol TerminalSession: AnyObject {
     func focus()
     func insert(_ text: String)      // replaces the current prompt line, does not run
     func run(_ text: String)         // replaces the current prompt line and runs
-    func apply(theme: Theme, scheme: ColorScheme, fontSize: Double)
+    func apply(theme: Theme, scheme: ColorScheme, fontSize: Double, fontFamily: String)
     func terminate()
+    /// Output of the last finished command (best effort), for "Copy Last Output".
+    var lastOutput: String? { get }
+    /// Search the scrollback; selects and scrolls to the match. Returns false when there is none.
+    func find(_ term: String, forward: Bool) -> Bool
+    func clearFind()
+    /// Everything the user types or pastes in this terminal (used for broadcasting).
+    var onInput: ((ArraySlice<UInt8>) -> Void)? { get set }
+    /// Sends bytes straight to the shell without reporting them to `onInput`.
+    func sendRaw(_ data: ArraySlice<UInt8>)
     /// A command is running in the shell right now (not just an idle prompt).
     var hasRunningCommand: Bool { get }
     /// Plain text of the terminal (scrollback + screen), for restoring it after a relaunch.
@@ -62,6 +71,15 @@ final class EventFileTailer {
     deinit { source?.cancel() }
 }
 
+/// The SwiftTerm view, reporting user input so panes can mirror it.
+final class BTTerminalView: LocalProcessTerminalView {
+    var onInput: ((ArraySlice<UInt8>) -> Void)?
+    override func send(source: TerminalView, data: ArraySlice<UInt8>) {
+        onInput?(data)
+        super.send(source: source, data: data)
+    }
+}
+
 final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalViewDelegate {
     struct Callbacks {
         var onCommand: @MainActor (HistoryEntry) -> Void
@@ -69,9 +87,10 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
         var onTitle: @MainActor (String) -> Void
         var onExit: @MainActor (Int32?) -> Void
         var onFocus: @MainActor () -> Void
+        var onRunning: @MainActor (Bool) -> Void = { _ in }
     }
 
-    private let view = LocalProcessTerminalView(frame: .zero)
+    private let view = BTTerminalView(frame: .zero)
     private var clickMonitor: Any?
     private var rightClickMonitor: Any?
     private var tailer: EventFileTailer?
@@ -81,6 +100,13 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
     var nsView: NSView { view }
     var hasRunningCommand: Bool { tracker.isRunning }
     private var appliedKey: String?
+    private var hadCustomColors = false
+    private var outputStart = 0
+    private(set) var lastOutput: String?
+    var onInput: ((ArraySlice<UInt8>) -> Void)? {
+        get { view.onInput }
+        set { view.onInput = newValue }
+    }
 
     init(tab: TerminalTab, integrationDir: URL, eventFile: URL, restoredText: String? = nil, callbacks: Callbacks) {
         self.tracker = CommandTracker(cwd: tab.cwd)
@@ -128,10 +154,14 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
         switch ShellEvent.parse(line) {
         case .commandStarted(let cmd)?:
             tracker.commandStarted(cmd)
+            outputStart = snapshotText().count
+            Task { @MainActor in callbacks.onRunning(true) }
         case .commandFinished(let code)?:
+            if let o = CommandOutput.since(snapshotText(), startLength: outputStart) { lastOutput = o }
             if let entry = tracker.commandFinished(exitCode: code) {
                 Task { @MainActor in callbacks.onCommand(entry) }
             }
+            Task { @MainActor in callbacks.onRunning(false) }
         case .cwd(let cwd)?:
             tracker.cwd = cwd
             Task { @MainActor in callbacks.onCwd(cwd) }
@@ -154,16 +184,36 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
         view.send(txt: PromptInput.runPayload(text, bracketedPaste: bracketedPaste))
     }
 
-    func apply(theme: Theme, scheme: ColorScheme, fontSize: Double) {
+    func apply(theme: Theme, scheme: ColorScheme, fontSize: Double, fontFamily: String) {
         // Re-applying identical colors/fonts makes the terminal redraw fully; skip when nothing changed.
-        let key = "\(theme.id)|\(scheme == .dark)|\(fontSize)"
+        let key = "\(theme.id)|\(theme.background(scheme))|\(scheme == .dark)|\(fontSize)|\(fontFamily)"
         guard key != appliedKey else { return }
         appliedKey = key
+        if let ansi = theme.ansi, ansi.count == 16 {
+            view.installColors(ansi.map { hex in
+                let (r, g, b) = ThemeImport.rgb(hex) ?? (0, 0, 0)
+                return SwiftTerm.Color(red: UInt16(r * 65535), green: UInt16(g * 65535), blue: UInt16(b * 65535))
+            })
+            hadCustomColors = true
+        } else if hadCustomColors {
+            view.installColors(SwiftTerm.Color.defaultInstalledColors)
+            hadCustomColors = false
+        }
         view.nativeBackgroundColor = NSColor(theme.terminalBackground(scheme))
         view.nativeForegroundColor = NSColor(theme.terminalForeground(scheme))
-        let f = NSFont.monospacedSystemFont(ofSize: CGFloat(fontSize), weight: .regular)
-        if view.font.pointSize != f.pointSize { view.font = f }
+        let custom = fontFamily.isEmpty ? nil : NSFont(name: fontFamily, size: CGFloat(fontSize))
+        let f = custom ?? NSFont.monospacedSystemFont(ofSize: CGFloat(fontSize), weight: .regular)
+        if view.font.pointSize != f.pointSize || view.font.fontName != f.fontName { view.font = f }
     }
+
+    func find(_ term: String, forward: Bool) -> Bool {
+        guard !term.isEmpty else { view.clearSearch(); return false }
+        return forward ? view.findNext(term) : view.findPrevious(term)
+    }
+
+    func clearFind() { view.clearSearch() }
+
+    func sendRaw(_ data: ArraySlice<UInt8>) { view.process?.send(data: data) }
 
     func snapshotText() -> String {
         String(decoding: view.getBufferAsData(kind: .normal), as: UTF8.self)
@@ -200,13 +250,14 @@ struct TerminalHost: NSViewRepresentable {
     let theme: Theme
     let scheme: ColorScheme
     let fontSize: Double
+    var fontFamily: String = ""
 
     func makeNSView(context: Context) -> NSView {
-        session.apply(theme: theme, scheme: scheme, fontSize: fontSize)
+        session.apply(theme: theme, scheme: scheme, fontSize: fontSize, fontFamily: fontFamily)
         return session.nsView
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        session.apply(theme: theme, scheme: scheme, fontSize: fontSize)
+        session.apply(theme: theme, scheme: scheme, fontSize: fontSize, fontFamily: fontFamily)
     }
 }
