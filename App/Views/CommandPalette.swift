@@ -28,6 +28,7 @@ struct CommandPalette: View {
         add("Show Command History", "⇧⌘H", "clock.arrow.circlepath") { model.toggleHistory() }
         add("Settings", "⌘,", "gearshape") { model.route = .settings }
         add("Show Walkthrough", "", "sparkles") { model.walkthroughOpen = true }
+        add("Support Better Terminal", "Sponsor or donate", "heart") { model.route = .settings }
         for (i, ws) in model.state.workspaces.enumerated() {
             add("Switch to \(ws.name)", "⌃⌘\(i + 1)", "rectangle.stack") { model.selectWorkspace(at: i) }
         }

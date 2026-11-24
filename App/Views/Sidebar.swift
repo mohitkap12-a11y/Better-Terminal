@@ -20,6 +20,17 @@ struct Sidebar: View {
     @State private var deleting: Workspace?
     @State private var targetedWorkspace: UUID?
     @State private var targetedNew = false
+    /// The whole WORKSPACES list folded away, and the ids of workspaces whose tabs are folded (comma-separated).
+    @AppStorage("sidebarWorkspacesFolded") private var sectionFolded = false
+    @AppStorage("sidebarFoldedWorkspaces") private var foldedText = ""
+
+    private var foldedWorkspaces: Set<String> { Set(foldedText.split(separator: ",").map(String.init)) }
+
+    private func toggleFolded(_ id: UUID) {
+        var ids = foldedText.split(separator: ",").map(String.init).filter { !$0.isEmpty }
+        if ids.contains(id.uuidString) { ids.removeAll { $0 == id.uuidString } } else { ids.append(id.uuidString) }
+        withAnimation(.easeOut(duration: 0.15)) { foldedText = ids.joined(separator: ",") }
+    }
 
     private let colors = ["#0A84FF", "#30B26B", "#FF7A45", "#8E6CF0", "#FF375F", "#64D2FF"]
 
@@ -33,58 +44,15 @@ struct Sidebar: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 3) {
-                    if !collapsed {
-                        Text("WORKSPACES").font(.system(size: 10.5, weight: .semibold)).tracking(0.6)
-                            .foregroundStyle(theme.faint)
-                            .padding(.horizontal, 12).padding(.bottom, 4)
+                    if collapsed {
+                        workspaceRows
+                    } else {
+                        // The whole list can be folded away, and each workspace folds its own tabs (remembered).
+                        SectionHeader(title: "WORKSPACES", folded: sectionFolded, count: model.state.workspaces.count) {
+                            withAnimation(.easeOut(duration: 0.15)) { sectionFolded.toggle() }
+                        }
+                        if !sectionFolded { workspaceRows }
                     }
-                    ForEach(Array(model.state.workspaces.enumerated()), id: \.element.id) { index, ws in
-                        let selected = model.route == .terminal && ws.id == model.state.activeWorkspaceID
-                        SidebarRow(title: ws.name, isSelected: selected, collapsed: collapsed,
-                                   action: { model.state.activeWorkspaceID = ws.id; model.route = .terminal }) {
-                            WorkspaceBadge(ws: ws, selected: selected)
-                        } trailing: {
-                            shortcut("⌃⌘\(index + 1)")
-                        }
-                        .overlay {
-                            if targetedWorkspace == ws.id {
-                                RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(theme.accent, lineWidth: 1.5)
-                            }
-                        }
-                        .draggable(AppModel.workspacePayload(ws.id))
-                        .dropDestination(for: String.self) { items, _ in
-                            model.handleDrop(items, ontoWorkspace: ws.id)
-                        } isTargeted: { targetedWorkspace = $0 ? ws.id : (targetedWorkspace == ws.id ? nil : targetedWorkspace) }
-                        .contextMenu {
-                            Button("Rename…") { newName = ws.name; renaming = ws }
-                            Menu("Color") {
-                                ForEach(colors, id: \.self) { hex in
-                                    Button { model.setColor(ws.id, hex: hex) } label: { Label(hex, systemImage: "circle.fill") }
-                                }
-                            }
-                            Divider()
-                            Button("Delete…", role: .destructive) { deleting = ws }
-                                .disabled(model.state.workspaces.count < 2)
-                        }
-                        // The open workspace lists its tabs: click to switch, drag to reorder or onto another workspace.
-                        if ws.id == model.state.activeWorkspaceID && !collapsed {
-                            ForEach(ws.tabs) { tab in
-                                SidebarTabRow(tab: tab, selected: model.route == .terminal && tab.id == ws.activeTabID)
-                            }
-                        }
-                    }
-                    SidebarRow(title: "New Workspace", isSelected: false, collapsed: collapsed,
-                               action: { model.addWorkspace() }) {
-                        icon("plus", selected: false)
-                    } trailing: { shortcut("⇧⌘N") }
-                    .overlay {
-                        if targetedNew {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(theme.accent, lineWidth: 1.5)
-                        }
-                    }
-                    .dropDestination(for: String.self) { items, _ in
-                        model.handleDropOnNewWorkspace(items)
-                    } isTargeted: { targetedNew = $0 }
                 }
                 .padding(.horizontal, 10)
             }
@@ -124,6 +92,64 @@ struct Sidebar: View {
                 deleting = nil
             }
         }
+    }
+
+    /// Every workspace, with its tabs underneath unless folded, then the New Workspace row.
+    @ViewBuilder private var workspaceRows: some View {
+        ForEach(Array(model.state.workspaces.enumerated()), id: \.element.id) { index, ws in
+            let selected = model.route == .terminal && ws.id == model.state.activeWorkspaceID
+            let folded = foldedWorkspaces.contains(ws.id.uuidString)
+            HStack(spacing: 0) {
+                SidebarRow(title: ws.name, isSelected: selected, collapsed: collapsed,
+                           action: { model.state.activeWorkspaceID = ws.id; model.route = .terminal }) {
+                    WorkspaceBadge(ws: ws, selected: selected)
+                } trailing: {
+                    shortcut("⌃⌘\(index + 1)")
+                }
+                .overlay {
+                    if targetedWorkspace == ws.id {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(theme.accent, lineWidth: 1.5)
+                    }
+                }
+                .draggable(AppModel.workspacePayload(ws.id))
+                .dropDestination(for: String.self) { items, _ in
+                    model.handleDrop(items, ontoWorkspace: ws.id)
+                } isTargeted: { targetedWorkspace = $0 ? ws.id : (targetedWorkspace == ws.id ? nil : targetedWorkspace) }
+                .contextMenu {
+                    Button("Rename…") { newName = ws.name; renaming = ws }
+                    Menu("Color") {
+                        ForEach(colors, id: \.self) { hex in
+                            Button { model.setColor(ws.id, hex: hex) } label: { Label(hex, systemImage: "circle.fill") }
+                        }
+                    }
+                    Divider()
+                    Button(folded ? "Show Tabs" : "Hide Tabs") { toggleFolded(ws.id) }
+                    Button("Delete…", role: .destructive) { deleting = ws }
+                        .disabled(model.state.workspaces.count < 2)
+                }
+                if !collapsed {
+                    FoldButton(folded: folded, label: ws.name) { toggleFolded(ws.id) }
+                }
+            }
+            // Tabs: click to switch, drag to reorder or onto another workspace.
+            if !collapsed && !folded {
+                ForEach(ws.tabs) { tab in
+                    SidebarTabRow(tab: tab, selected: model.route == .terminal && ws.id == model.state.activeWorkspaceID && tab.id == ws.activeTabID)
+                }
+            }
+        }
+        SidebarRow(title: "New Workspace", isSelected: false, collapsed: collapsed,
+                   action: { model.addWorkspace() }) {
+            icon("plus", selected: false)
+        } trailing: { shortcut("⇧⌘N") }
+        .overlay {
+            if targetedNew {
+                RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(theme.accent, lineWidth: 1.5)
+            }
+        }
+        .dropDestination(for: String.self) { items, _ in
+            model.handleDropOnNewWorkspace(items)
+        } isTargeted: { targetedNew = $0 }
     }
 
     private func icon(_ name: String, selected: Bool) -> some View {
@@ -267,11 +293,7 @@ private struct SidebarTabRow: View {
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .onTapGesture(count: 2) { model.beginRenameTab(tab) }
-        .onTapGesture {
-            model.route = .terminal
-            model.mutateActive { $0.activeTabID = tab.id }
-            model.session(for: tab).focus()
-        }
+        .onTapGesture { model.select(tab: tab.id) }
         .draggable(AppModel.tabPayload(tab.id))
         .dropDestination(for: String.self) { items, _ in
             model.handleDrop(items, ontoTab: tab.id)
@@ -279,5 +301,64 @@ private struct SidebarTabRow: View {
         .tabContextMenu(tab)
         .accessibilityLabel(tab.title)
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+/// "WORKSPACES" heading that folds the whole list.
+private struct SectionHeader: View {
+    @Environment(\.theme) private var theme
+    let title: String
+    let folded: Bool
+    let count: Int
+    let toggle: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: toggle) {
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 8.5, weight: .bold))
+                    .rotationEffect(.degrees(folded ? 0 : 90))
+                Text(title).font(.system(size: 10.5, weight: .semibold)).tracking(0.6)
+                if folded {
+                    Text("\(count)").font(.system(size: 10, weight: .semibold)).monospacedDigit()
+                        .padding(.horizontal, 6).padding(.vertical, 1)
+                        .background(theme.track, in: Capsule())
+                }
+                Spacer()
+            }
+            .foregroundStyle(hovering ? theme.muted : theme.faint)
+            .padding(.horizontal, 12).padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .padding(.bottom, 2)
+        .accessibilityLabel("\(title.capitalized), \(folded ? "collapsed" : "expanded")")
+        .help(folded ? "Show workspaces" : "Hide workspaces")
+    }
+}
+
+/// Small chevron at the end of a workspace row that folds or unfolds its tabs.
+private struct FoldButton: View {
+    @Environment(\.theme) private var theme
+    let folded: Bool
+    let label: String
+    let toggle: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: toggle) {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 9, weight: .bold))
+                .rotationEffect(.degrees(folded ? 0 : 90))
+                .foregroundStyle(hovering ? Color.primary : theme.faint)
+                .frame(width: 22, height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .accessibilityLabel("\(folded ? "Show" : "Hide") tabs of \(label)")
+        .help(folded ? "Show tabs" : "Hide tabs")
     }
 }

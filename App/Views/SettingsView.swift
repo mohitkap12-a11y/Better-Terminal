@@ -12,6 +12,7 @@ struct SettingsPage: View {
                     TerminalSection()
                     UpdatesSection()
                     DataSection()
+                    SupportSection()
                     ShortcutsSection()
                     AboutSection()
                 }
@@ -204,5 +205,66 @@ private struct AboutSection: View {
                 PillButton(title: "Show Walkthrough") { model.route = .terminal; model.walkthroughOpen = true }
             }
         }
+    }
+}
+
+/// Where to send people who want to support Better Terminal. Keep in sync with `site/support.html`.
+enum SupportLinks {
+    static let github = URL(string: "https://github.com/mohitkap12-a11y/Better-Terminal")!
+    static let sponsorGithub = URL(string: "https://github.com/sponsors/mohitkap12-a11y")!
+    static let sponsorPaypal = URL(string: "https://paypal.me/mkapoor91")!
+    static let issues = URL(string: "https://github.com/mohitkap12-a11y/Better-Terminal/issues/new")!
+    static let website = URL(string: "https://mohitkap12-a11y.github.io/Better-Terminal/support.html")!
+}
+
+/// A gentle, optional ask: Better Terminal is free and open source, and nothing is gated behind it.
+private struct SupportSection: View {
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        SettingsSection(title: "Support", subtitle: "Optional. Better Terminal is free and open source") {
+            Text("If it saves you time, you can help keep it maintained and growing. Nothing in the app depends on it.")
+                .font(.system(size: 12.5)).foregroundStyle(theme.muted)
+                .fixedSize(horizontal: false, vertical: true).padding(.vertical, 10)
+            SupportLinkRow(symbol: "heart.fill", title: "Sponsor on GitHub",
+                           detail: "Recurring or one-time support through GitHub Sponsors.", url: SupportLinks.sponsorGithub)
+            SupportLinkRow(symbol: "creditcard", title: "Donate with PayPal",
+                           detail: "A one-time contribution of any amount.", url: SupportLinks.sponsorPaypal)
+            SupportLinkRow(symbol: "star", title: "Star on GitHub",
+                           detail: "A star helps other people find the app.", url: SupportLinks.github)
+            SupportLinkRow(symbol: "exclamationmark.bubble", title: "Report an issue",
+                           detail: "Found a bug or want a feature? Open an issue.", url: SupportLinks.issues)
+        }
+    }
+}
+
+private struct SupportLinkRow: View {
+    @Environment(\.theme) private var theme
+    let symbol: String
+    let title: String
+    let detail: String
+    let url: URL
+    @State private var hovering = false
+
+    var body: some View {
+        Link(destination: url) {
+            HStack(spacing: 12) {
+                Image(systemName: symbol).font(.system(size: 15)).foregroundStyle(theme.accent).frame(width: 24)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.primary)
+                    Text(detail).font(.system(size: 11.5)).foregroundStyle(theme.muted)
+                }
+                Spacer()
+                Image(systemName: "arrow.up.right").font(.system(size: 11)).foregroundStyle(theme.faint)
+            }
+            .padding(.horizontal, 12).padding(.vertical, 9)
+            .background(hovering ? theme.hover : theme.card, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(theme.border))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .padding(.bottom, 6)
+        .accessibilityLabel("\(title). \(detail)")
     }
 }

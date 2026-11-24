@@ -28,6 +28,7 @@
 ## Features
 
 - **Workspaces.** One per project, each with its own tabs, layout and folders. Switch from the sidebar or with `⌃⌘1–9`.
+- **Collapsible sidebar.** Fold the whole workspace list, or each workspace's tabs; the sidebar remembers it.
 - **Drag to organise.** Reorder workspaces and tabs by dragging, drop a tab on a workspace to move it, right-click a tab to rename it or move it to another workspace.
 - **Pane layouts.** Tabs fill a grid: 1×2, 2×1, 2×2 or any custom rows × columns. New tabs follow the layout.
 - **History for every tab.** Click the clock (or `⇧⌘H`), type to search, `↑↓` to move, `⏎` to insert, `⌘⏎` to run. Right-click a command to copy it or run it again.
@@ -86,6 +87,10 @@ Tag-driven: `v1.2.3` is a stable release, `v1.2.3-beta.1` goes to the Beta chann
 ## Website
 
 The site in [`site/`](site) is plain HTML and CSS, deployed to GitHub Pages by `.github/workflows/pages.yml`. The hero shows the real screenshots in `site/assets/screenshots/`. Retake them with `scripts/screenshot.sh dark` (and `light`) on a Mac with the app open; delete the PNGs to fall back to the built-in illustration.
+
+## Support
+
+Better Terminal is free and open source. If it saves you time you can [sponsor it on GitHub](https://github.com/sponsors/mohitkap12-a11y), [donate with PayPal](https://paypal.me/mkapoor91) or just star the repo. It is all optional; see the [support page](https://mohitkap12-a11y.github.io/Better-Terminal/support.html) or Settings → Support in the app.
 
 ## License
 

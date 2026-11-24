@@ -116,10 +116,23 @@ final class AppModel {
     // MARK: Tabs
     func newTab() { mutateActive { $0.addTab() } }
 
+    /// A workspace always keeps at least one tab, so its last tab can't be closed.
+    func canCloseTab(_ id: UUID) -> Bool {
+        state.workspaces.contains { $0.tabs.count > 1 && $0.tabs.contains { $0.id == id } }
+    }
+
+    /// Opens the tab (switching workspace if needed) and shows the terminal.
+    func select(tab id: UUID) {
+        guard let wi = state.workspaces.firstIndex(where: { $0.tabs.contains { $0.id == id } }) else { return }
+        state.activeWorkspaceID = state.workspaces[wi].id
+        state.workspaces[wi].activeTabID = id
+        route = .terminal
+    }
+
     func closeTab(_ id: UUID) {
-        // A workspace always keeps at least one tab.
-        guard let ws = active, ws.tabs.count > 1, ws.tabs.contains(where: { $0.id == id }) else { return }
-        mutateActive { $0.closeTab(id) }
+        guard let wi = state.workspaces.firstIndex(where: { $0.tabs.contains { $0.id == id } }),
+              state.workspaces[wi].tabs.count > 1 else { return }
+        state.workspaces[wi].closeTab(id)
         sessions[id]?.terminate(); sessions[id] = nil
         clearedBaseline[id] = nil
         store.deleteHistory(tab: id)
