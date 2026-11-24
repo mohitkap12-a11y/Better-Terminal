@@ -44,6 +44,8 @@ final class QuickTerminal {
     private var session: TerminalSession?
     private var hotKey: EventHotKeyRef?
     private var handler: EventHandlerRef?
+    private var escMonitor: Any?
+    private var lastFolder: String?
 
     /// Lets the quick terminal open on demand (palette, "Show now") even when its hotkey is off.
     func attach(model: AppModel) { self.model = model }
@@ -88,8 +90,9 @@ final class QuickTerminal {
         if let hotKey { UnregisterEventHotKey(hotKey) }
         if let handler { RemoveEventHandler(handler) }
         hotKey = nil; handler = nil
+        if let m = escMonitor { NSEvent.removeMonitor(m); escMonitor = nil }
         panel?.orderOut(nil); panel = nil
-        session?.terminate(); session = nil
+        session?.terminate(); session = nil; lastFolder = nil
     }
 
     func toggle() {
@@ -99,13 +102,54 @@ final class QuickTerminal {
 
     private func hide() { panel?.orderOut(nil) }
 
+    private static let margin: CGFloat = 16
+    private static let size = NSSize(width: 580, height: 340)
+
+    // MARK: Which folder to open in
+
+    /// The folder to start in: the front Finder window's folder when you press the key from Finder, or the
+    /// current tab's folder when you press it inside Better Terminal. Nil elsewhere (the shell keeps its folder).
+    private func launchFolder() -> String? {
+        guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
+        if app.bundleIdentifier == "com.apple.finder" { return finderFolder() }
+        if app.processIdentifier == ProcessInfo.processInfo.processIdentifier { return model?.activeTabFolder }
+        return nil
+    }
+
+    private func finderFolder() -> String? {
+        let source = """
+        tell application "Finder"
+            if (count of windows) > 0 then
+                return POSIX path of (target of front window as alias)
+            else
+                return POSIX path of (path to desktop folder)
+            end if
+        end tell
+        """
+        var error: NSDictionary?
+        guard let result = NSAppleScript(source: source)?.executeAndReturnError(&error).stringValue else {
+            Diagnostics.log("quick terminal: could not read the Finder folder (\(error?[NSAppleScript.errorMessage] ?? "unknown")). Allow it in System Settings > Privacy & Security > Automation.")
+            return nil
+        }
+        return result.count > 1 && result.hasSuffix("/") ? String(result.dropLast()) : result
+    }
+
+    private func quoted(_ path: String) -> String { "'" + path.replacingOccurrences(of: "'", with: "'\\''") + "'" }
+
+    // MARK: Show
+
     private func show() {
         guard let model else { return }
+        let folder = launchFolder()          // ask before this app takes focus
         if session == nil {
-            session = model.makeEphemeralSession(name: "Quick Terminal") { [weak self] in
+            session = model.makeEphemeralSession(name: "Quick Terminal", cwd: folder) { [weak self] in
                 // Shell exited: close the panel; the next toggle starts a fresh shell.
-                self?.panel?.orderOut(nil); self?.panel = nil; self?.session = nil
+                self?.panel?.orderOut(nil); self?.panel = nil; self?.session = nil; self?.lastFolder = nil
             }
+            lastFolder = folder
+        } else if let folder, folder != lastFolder, session?.hasRunningCommand == false {
+            session?.run("cd " + quoted(folder))
+            lastFolder = folder
         }
         guard let session else { return }
         session.apply(theme: model.theme, scheme: NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .dark : .light,
@@ -115,15 +159,32 @@ final class QuickTerminal {
             p.level = .floating
             p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             p.isMovable = false
+            p.isOpaque = false
+            p.backgroundColor = .clear
             p.hasShadow = true
-            p.contentView = session.nsView
+            // Rounded card around the terminal.
+            let box = NSView()
+            box.wantsLayer = true
+            box.layer?.cornerRadius = 12
+            box.layer?.masksToBounds = true
+            box.layer?.borderWidth = 1
+            box.layer?.borderColor = NSColor.separatorColor.cgColor
+            let v = session.nsView
+            v.removeFromSuperview()
+            v.frame = box.bounds
+            v.autoresizingMask = [.width, .height]
+            box.addSubview(v)
+            p.contentView = box
             panel = p
         }
-        guard let panel, let screen = NSScreen.main ?? NSScreen.screens.first else { return }
+        installEscapeMonitor()
+        // Bottom-right corner of the screen the pointer is on.
+        let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main ?? NSScreen.screens[0]
         let area = screen.visibleFrame
-        let height = (area.height * 0.42).rounded()
-        let target = NSRect(x: area.minX, y: area.maxY - height, width: area.width, height: height)
-        panel.setFrame(target.offsetBy(dx: 0, dy: height), display: false)       // start above the screen edge
+        let w = min(Self.size.width, area.width - 2 * Self.margin), h = min(Self.size.height, area.height - 2 * Self.margin)
+        let target = NSRect(x: area.maxX - w - Self.margin, y: area.minY + Self.margin, width: w, height: h)
+        guard let panel else { return }
+        panel.setFrame(target.offsetBy(dx: 0, dy: -(h + 2 * Self.margin)), display: false)   // start below the screen edge
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         NSAnimationContext.runAnimationGroup { ctx in
@@ -131,5 +192,16 @@ final class QuickTerminal {
             panel.animator().setFrame(target, display: true)
         }
         session.focus()
+    }
+
+    /// Esc hides the quick terminal, unless a command is running (then Esc goes to the program, e.g. vim).
+    private func installEscapeMonitor() {
+        guard escMonitor == nil else { return }
+        escMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard event.keyCode == 53, let self, let panel = self.panel, event.window === panel,
+                  self.session?.hasRunningCommand != true else { return event }
+            self.hide()
+            return nil
+        }
     }
 }

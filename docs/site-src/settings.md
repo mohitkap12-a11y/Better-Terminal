@@ -22,7 +22,7 @@ Open Settings with ⌘, or the gear at the bottom of the sidebar. It opens insid
 | Font size | 13 pt | 9 to 32. Also ⌘+ and ⌘−. |
 | Font | System Mono | Any installed monospaced font. |
 | Notify when long commands finish | On | Notification for commands of 10 s or more in tabs you are not looking at. See [Notifications](notifications.html). |
-| Quick terminal | Off | Global key that drops a terminal from the top of the screen. See [Quick terminal](quick-terminal.html). |
+| Quick terminal | Off | Global key that pops up a small terminal in the bottom-right corner. See [Quick terminal](quick-terminal.html). |
 | Quick terminal key | ⌃` | Shown when the quick terminal is on. |
 | Right-click copies selected text | Off | Copy immediately instead of showing the menu. |
 | Resume on relaunch | On | Save and restore the text on screen. See [Resume](resume.html). |

@@ -139,7 +139,7 @@ private struct TerminalSection: View {
                     .labelsHidden().toggleStyle(.switch)
             }
             SettingsRow(title: "Quick terminal",
-                        subtitle: "A key you press anywhere to drop a terminal down from the top of the screen. Press it again to hide.") {
+                        subtitle: "A key you press anywhere to pop up a small terminal in the bottom-right corner. It opens in the folder of the Finder window or tab you came from. Esc or the key hides it.") {
                 Toggle("", isOn: Binding(get: { model.state.quickTerminalEnabled }, set: { model.setQuickTerminal($0) }))
                     .labelsHidden().toggleStyle(.switch)
             }

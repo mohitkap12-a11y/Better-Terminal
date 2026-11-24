@@ -173,7 +173,7 @@ public struct AppState: Codable, Sendable {
     public var terminalFontFamily: String = ""
     public var templates: [WorkspaceTemplate] = []
     public var customThemes: [CustomTheme] = []
-    /// Global hotkey (⌃`) that drops a terminal down from the top of the screen.
+    /// Global hotkey (⌃`) that pops up a small terminal in the bottom-right corner.
     public var quickTerminalEnabled: Bool = false
     /// Which key opens the quick terminal (see `QuickHotkey` in the app).
     public var quickTerminalHotkey: String = "ctrlGrave"

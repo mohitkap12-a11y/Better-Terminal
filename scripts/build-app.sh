@@ -54,7 +54,7 @@ if [[ -n "${SIGN_IDENTITY:-}" ]]; then
   codesign --force --timestamp --options runtime --sign "$SIGN_IDENTITY" "$AUTOUPDATE"
   codesign --force --timestamp --options runtime --sign "$SIGN_IDENTITY" "$UPDATER_APP"
   codesign --force --timestamp --options runtime --sign "$SIGN_IDENTITY" "$FW"
-  codesign --force --timestamp --options runtime --sign "$SIGN_IDENTITY" "$APP"
+  codesign --force --timestamp --options runtime --entitlements Resources/BetterTerminal.entitlements --sign "$SIGN_IDENTITY" "$APP"
 else
   echo "warning: SIGN_IDENTITY not set — ad-hoc signing (not distributable)" >&2
   codesign --force --sign - --deep "$APP"

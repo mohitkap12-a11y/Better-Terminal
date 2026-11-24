@@ -9,6 +9,9 @@ All notable changes. Release notes shown in the update window live in `docs/rele
 - Imported dark themes no longer give an unreadable window when the Mac or the Mode setting is light: an imported theme now decides light or dark, and the Mode control is dimmed with an explanation.
 - Removing an imported theme updates Settings immediately.
 
+### Changed
+- The quick terminal is now a small 580 × 340 window in the bottom-right corner (it used to cover the top of the screen). Esc hides it, and it opens in the folder of the Finder window or tab you came from (Finder access needs a one-time permission).
+
 ### Added
 - Quick terminal key choice (⌃`, ⌥Space, ⌃⌥Space, F12), a status line saying whether the key registered, and a "Show now" button.
 - Command palette: Actions and Commands tabs (→ / ←), your last three commands on top, the last 30 commands from every terminal on the Commands tab, and wrap-around arrow keys.

@@ -38,4 +38,5 @@ targets:
         SPARKLE_PUBLIC_ED_KEY: ""
         ENABLE_APP_SANDBOX: NO
         ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_ENTITLEMENTS: Resources/BetterTerminal.entitlements
         CODE_SIGN_STYLE: Automatic
