@@ -48,6 +48,38 @@ enum ShortcutCatalog {
 private struct KeyCap: View {
     @Environment(\.theme) private var theme
     let keys: String
+
+    var body: some View {
+        Text(keys)
+            .font(.system(size: 11.5, design: .rounded))
+            .foregroundStyle(theme.muted)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(theme.track, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+    }
+}
+
+/// A quick look at all shortcuts, in a popup like the search palette. Type to filter, esc to close.
+struct ShortcutsPopup: View {
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+    @FocusState private var focused: Bool
+
+    private var filtered: [ShortcutGroup] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        if q.isEmpty { return ShortcutCatalog.groups }
+        var result: [ShortcutGroup] = []
+        for group in ShortcutCatalog.groups {
+            var hits: [ShortcutItem] = []
+            for item in group.items where item.name.localizedCaseInsensitiveContains(q) || item.keys.localizedCaseInsensitiveContains(q) {
+                hits.append(item)
+            }
+            if !hits.isEmpty { result.append(ShortcutGroup(title: group.title, items: hits)) }
+        }
+        return result
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             searchField
