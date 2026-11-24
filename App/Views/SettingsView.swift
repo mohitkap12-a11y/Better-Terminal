@@ -311,29 +311,43 @@ private struct ShortcutsSection: View {
 
     var body: some View {
         SettingsSection(title: "Shortcuts", subtitle: "Keyboard and mouse shortcuts") {
-            SettingsRow(title: "Shortcuts window", subtitle: "A quick, searchable popup with every shortcut. Also in the sidebar below Search, or press ⌘/.",
+            SettingsRow(title: "Shortcuts window",
+                        subtitle: "A quick, searchable popup with every shortcut. Also in the sidebar below Search, or press ⌘/.",
                         showsDivider: false) {
                 PillButton(title: "Open") { model.shortcutsOpen = true }
             }
             VStack(alignment: .leading, spacing: 14) {
-                ForEach(ShortcutCatalog.groups, id: \.title) { group in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(group.title.uppercased()).font(.system(size: 10.5, weight: .semibold)).foregroundStyle(theme.faint)
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 8) {
-                            ForEach(group.items, id: \.name) { item in
-                                HStack {
-                                    Text(item.name).font(.system(size: 12.5))
-                                    Spacer()
-                                    Text(item.keys).font(.system(size: 11.5, design: .rounded)).foregroundStyle(theme.muted)
-                                        .padding(.horizontal, 7).padding(.vertical, 2)
-                                        .background(theme.track, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
-                                }
-                            }
-                        }
-                    }
+                ForEach(ShortcutCatalog.groups) { group in
+                    groupView(group)
                 }
             }
             .padding(.vertical, 6)
+        }
+    }
+
+    private func groupView(_ group: ShortcutGroup) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(group.title.uppercased())
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(theme.faint)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 8) {
+                ForEach(group.items) { item in
+                    row(item)
+                }
+            }
+        }
+    }
+
+    private func row(_ item: ShortcutItem) -> some View {
+        HStack {
+            Text(item.name).font(.system(size: 12.5))
+            Spacer()
+            Text(item.keys)
+                .font(.system(size: 11.5, design: .rounded))
+                .foregroundStyle(theme.muted)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 2)
+                .background(theme.track, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
         }
     }
 }
