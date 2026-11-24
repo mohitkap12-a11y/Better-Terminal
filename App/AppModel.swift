@@ -21,6 +21,7 @@ final class AppModel {
     // UI triggers (keyboard shortcuts)
     var route: AppRoute = .terminal
     var paletteOpen = false
+    var shortcutsOpen = false
     var walkthroughOpen = false
     /// Tab being renamed (the alert lives in RootView) and the text typed so far.
     var renamingTab: UUID?

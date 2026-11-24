@@ -29,6 +29,7 @@ struct RootView: View {
         .ignoresSafeArea(.container, edges: .top)
         .background(WindowConfigurator())
         .sheet(isPresented: Bindable(model).paletteOpen) { CommandPalette() }
+        .sheet(isPresented: Bindable(model).shortcutsOpen) { ShortcutsPopup() }
         .alert("Rename tab", isPresented: Binding(get: { model.renamingTab != nil },
                                                   set: { if !$0 { model.renamingTab = nil } })) {
             TextField("Name", text: Bindable(model).renameText)

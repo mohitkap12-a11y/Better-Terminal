@@ -44,6 +44,7 @@ struct CommandPalette: View {
         add("New Workspace", "⇧⌘N", "rectangle.stack.badge.plus") { model.addWorkspace() }
         add("Split Right", "⌘D", "rectangle.split.2x1") { model.split(.right) }
         add("Split Down", "⇧⌘D", "rectangle.split.1x2") { model.split(.down) }
+        add("Keyboard Shortcuts", "⌘/", "keyboard") { model.shortcutsOpen = true }
         add("Find in Terminal", "⌘F", "magnifyingglass") { model.openFind() }
         add(model.active?.broadcast == true ? "Stop Broadcasting Input" : "Broadcast Input to All Panes", "⌥⌘I", "dot.radiowaves.left.and.right") { model.toggleBroadcast() }
         add("Copy Last Command Output", "⌥⌘C", "doc.on.clipboard") { model.copyLastOutput() }

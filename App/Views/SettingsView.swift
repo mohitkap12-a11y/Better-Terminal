@@ -307,33 +307,24 @@ private struct DataSection: View {
 
 private struct ShortcutsSection: View {
     @Environment(\.theme) private var theme
-    private let groups: [(String, [(String, String)])] = [
-        ("Tabs and workspaces", [
-            ("New tab", "⌘T"), ("Close tab", "⌘W"), ("New workspace", "⇧⌘N"), ("Switch workspace", "⌃⌘1–9"),
-            ("Close tab with middle-click", "middle-click"), ("Rename tab", "double-click")]),
-        ("Panes", [
-            ("Split right", "⌘D"), ("Split down", "⇧⌘D"), ("Move between panes", "⌘← ↑ ↓ →"),
-            ("Pane layout", "⌥⌘L"), ("Broadcast typing to all panes", "⌥⌘I"), ("Swap two panes", "drag header")]),
-        ("Search and history", [
-            ("Command palette", "⌘K"), ("Palette: Actions ⇄ Commands", "← →"), ("Command history (this tab)", "⇧⌘H"),
-            ("Find in terminal", "⌘F"), ("Find next / previous", "⌘G / ⇧⌘G")]),
-        ("Terminal", [
-            ("Copy last command output", "⌥⌘C"), ("Bigger / smaller text", "⌘+ / ⌘−"),
-            ("Quick terminal", "⌃` (changeable)"), ("Open a link", "click or ⌘-click"), ("Settings", "⌘,")])
-    ]
+    @Environment(AppModel.self) private var model
 
     var body: some View {
         SettingsSection(title: "Shortcuts", subtitle: "Keyboard and mouse shortcuts") {
+            SettingsRow(title: "Shortcuts window", subtitle: "A quick, searchable popup with every shortcut. Also in the sidebar below Search, or press ⌘/.",
+                        showsDivider: false) {
+                PillButton(title: "Open") { model.shortcutsOpen = true }
+            }
             VStack(alignment: .leading, spacing: 14) {
-                ForEach(groups, id: \.0) { group in
+                ForEach(ShortcutCatalog.groups, id: \.title) { group in
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(group.0.uppercased()).font(.system(size: 10.5, weight: .semibold)).foregroundStyle(theme.faint)
+                        Text(group.title.uppercased()).font(.system(size: 10.5, weight: .semibold)).foregroundStyle(theme.faint)
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 8) {
-                            ForEach(group.1, id: \.0) { item in
+                            ForEach(group.items, id: \.name) { item in
                                 HStack {
-                                    Text(item.0).font(.system(size: 12.5))
+                                    Text(item.name).font(.system(size: 12.5))
                                     Spacer()
-                                    Text(item.1).font(.system(size: 11.5, design: .rounded)).foregroundStyle(theme.muted)
+                                    Text(item.keys).font(.system(size: 11.5, design: .rounded)).foregroundStyle(theme.muted)
                                         .padding(.horizontal, 7).padding(.vertical, 2)
                                         .background(theme.track, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
                                 }

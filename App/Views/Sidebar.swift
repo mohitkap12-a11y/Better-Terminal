@@ -64,6 +64,10 @@ struct Sidebar: View {
                            action: { model.paletteOpen = true }) {
                     icon("magnifyingglass", selected: false)
                 } trailing: { shortcut("⌘K") }
+                SidebarRow(title: "Shortcuts", isSelected: false, collapsed: collapsed,
+                           action: { model.shortcutsOpen = true }) {
+                    icon("keyboard", selected: false)
+                } trailing: { shortcut("⌘/") }
                 SidebarRow(title: "Settings", isSelected: model.route == .settings, collapsed: collapsed,
                            action: { model.route = .settings }) {
                     icon("gearshape", selected: model.route == .settings)
