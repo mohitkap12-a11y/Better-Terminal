@@ -38,7 +38,8 @@ jobs:
         run: |
           APP=$(find build/Build/Products -name 'Better Terminal.app' -o -name 'BetterTerminal.app' | head -1)
           echo "app: $APP"
-          BIN=$(ls "$APP"/Contents/MacOS/* | head -1)
+          BIN="$APP/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print CFBundleExecutable' "$APP/Contents/Info.plist")"
+          echo "binary: $BIN"
           "$BIN" --smoke-test "$RUNNER_TEMP/smoke.txt" &
           PID=$!
           for i in $(seq 1 40); do
