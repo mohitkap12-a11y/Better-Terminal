@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panes and layouts | Better Terminal docs</title>
+<meta name="description" content="Every tab of a workspace is shown as a pane in a grid. The grid is the workspace's layout: rows × columns.">
+<meta property="og:title" content="Panes and layouts | Better Terminal docs"><meta property="og:type" content="website">
+<meta property="og:image" content="https://mohitkap12-a11y.github.io/Better-Terminal/assets/og.png">
+<link rel="icon" href="../assets/favicon.png"><link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../styles.css">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site"><div class="wrap"><div class="bar">
+  <a class="brand" href="../index.html"><img src="../assets/icon-512.png" alt="">Better Terminal</a>
+  <nav class="links">
+    <a class="hide-sm" href="../index.html#features">Features</a><a class="hide-sm" href="./">Docs</a><a class="hide-sm" href="../support.html">Support</a><a class="hide-sm" href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a>
+    <button class="icon-btn" id="theme-toggle" aria-label="Switch light and dark theme"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+    <button class="icon-btn menu-btn" id="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu"><svg class="ico-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><svg class="ico-close" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </nav>
+  <div class="mobile-menu" id="mobile-menu" hidden><a href="../index.html#features">Features</a><a href="./">Docs</a><a href="../support.html">Support</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a><a class="btn primary" href="https://github.com/mohitkap12-a11y/Better-Terminal/releases/latest/download/BetterTerminal.dmg">Download for macOS</a></div>
+</div></div></header>
+
+<main id="main"><div class="wrap docs">
+  <aside class="dnav" aria-label="Documentation"><details class="dmob"><summary>Documentation menu</summary><div class="dg"><div class="dt">Start</div><a href="./">Documentation</a><a href="install.html">Install and update</a><a href="features.html">Features at a glance</a></div><div class="dg"><div class="dt">Organise</div><a href="workspaces-tabs.html">Workspaces and tabs</a><a href="panes-layouts.html" aria-current="page">Panes and layouts</a><a href="templates.html">Workspace templates</a><a href="resume.html">Resume on relaunch</a></div><div class="dg"><div class="dt">Find</div><a href="history-search.html">Command history and search</a><a href="terminal.html">Using the terminal</a><a href="notifications.html">Tab status and notifications</a><a href="quick-terminal.html">Quick terminal</a></div><div class="dg"><div class="dt">Look</div><a href="themes.html">Themes and fonts</a></div><div class="dg"><div class="dt">Under the hood</div><a href="shell-integration.html">Shell integration</a><a href="data-privacy.html">Your data and privacy</a></div><div class="dg"><div class="dt">Reference</div><a href="shortcuts.html">Keyboard shortcuts</a><a href="settings.html">Settings reference</a><a href="troubleshooting.html">Troubleshooting</a></div></details><div class="dside"><div class="dg"><div class="dt">Start</div><a href="./">Documentation</a><a href="install.html">Install and update</a><a href="features.html">Features at a glance</a></div><div class="dg"><div class="dt">Organise</div><a href="workspaces-tabs.html">Workspaces and tabs</a><a href="panes-layouts.html" aria-current="page">Panes and layouts</a><a href="templates.html">Workspace templates</a><a href="resume.html">Resume on relaunch</a></div><div class="dg"><div class="dt">Find</div><a href="history-search.html">Command history and search</a><a href="terminal.html">Using the terminal</a><a href="notifications.html">Tab status and notifications</a><a href="quick-terminal.html">Quick terminal</a></div><div class="dg"><div class="dt">Look</div><a href="themes.html">Themes and fonts</a></div><div class="dg"><div class="dt">Under the hood</div><a href="shell-integration.html">Shell integration</a><a href="data-privacy.html">Your data and privacy</a></div><div class="dg"><div class="dt">Reference</div><a href="shortcuts.html">Keyboard shortcuts</a><a href="settings.html">Settings reference</a><a href="troubleshooting.html">Troubleshooting</a></div></div></aside>
+  <article class="dbody">
+    <p class="crumbs"><a href="../index.html">Home</a> › <a href="./">Docs</a> › Panes and layouts</p>
+<h1>Panes and layouts</h1>
+<p>Every tab of a workspace is shown as a pane in a grid. The grid is the workspace's <strong>layout</strong>: rows × columns.</p>
+<h2 id="choosing-a-layout">Choosing a layout<a class="anchor" href="#choosing-a-layout" aria-label="Link to this section">#</a></h2>
+<p>Click the layout button at the right of the tab bar (⌥⌘L), or use the command palette. Presets are 1×1, 1×2, 2×1, 1×3, 3×1, 2×2, 2×3, 3×2 and 3×3; you can set any rows × columns up to 6 × 6. New tabs follow the layout and fill it row by row.</p>
+<p>If you have more tabs than slots, extra rows are added so no tab is hidden.</p>
+<h2 id="fit">The grid fits your tabs<a class="anchor" href="#fit" aria-label="Link to this section">#</a></h2>
+<p>Your chosen layout never changes by itself, but what is drawn adapts to the number of tabs:</p>
+<div class="tbl"><table><thead><tr><th>Layout</th><th>Tabs</th><th>Shown as</th></tr></thead><tbody><tr><td>1×6</td><td>6</td><td>1×6</td></tr><tr><td>1×6</td><td>5</td><td>1×5</td></tr><tr><td>1×6</td><td>2</td><td>1×2</td></tr><tr><td>6×1</td><td>3</td><td>3×1</td></tr><tr><td>3×3</td><td>4</td><td>2×3</td></tr></tbody></table></div>
+<p>Add a tab and the grid grows back toward your layout. The layout button still shows the layout you picked.</p>
+<h2 id="split">Split panes<a class="anchor" href="#split" aria-label="Link to this section">#</a></h2>
+<ul><li><strong>Split Right</strong>: ⌘D. A new pane opens to the right of the current one, in the same folder.</li><li><strong>Split Down</strong>: ⇧⌘D. A new pane opens below.</li></ul>
+<p>Splitting inserts the new tab right after the current one and grows the layout along that direction (columns for right, rows for down) up to six. Splits are also in the <strong>Pane</strong> menu and the command palette.</p>
+<h2 id="moving-between-panes">Moving between panes<a class="anchor" href="#moving-between-panes" aria-label="Link to this section">#</a></h2>
+<p>Hold ⌘ and press an arrow key to jump to the neighbouring pane. The pane you land on pulses briefly. At the end of a row or column nothing happens. Moving down into a shorter last row lands on its last pane.</p>
+<p>You can also click a pane or its header.</p>
+<h2 id="swapping-panes">Swapping panes<a class="anchor" href="#swapping-panes" aria-label="Link to this section">#</a></h2>
+<p>Drag a pane's header (the strip with the folder path) onto another pane. The two swap places and the target shows an accent outline while you drag. Swapping works within one workspace.</p>
+<h2 id="pane-header">Pane header<a class="anchor" href="#pane-header" aria-label="Link to this section">#</a></h2>
+<p>Each pane has a header with its folder, a status badge (spinner or red dot, see <a href="notifications.html">Tab status</a>) and the history button. Right-click the folder for <strong>Reveal in Finder</strong>, <strong>Open in VS Code</strong> (when installed), <strong>Copy Path</strong> and <strong>Copy Last Output</strong>. Middle-click the header to close the pane's tab.</p>
+<h2 id="broadcast">Broadcast<a class="anchor" href="#broadcast" aria-label="Link to this section">#</a></h2>
+<p>Turn on <a href="terminal.html#broadcast">broadcast</a> to type in every pane of the workspace at once.</p>
+<nav class="pn"><a class="prev" href="workspaces-tabs.html"><small>Previous</small>Workspaces and tabs</a><a class="next" href="templates.html"><small>Next</small>Workspace templates</a></nav>
+    <p class="edit"><a href="https://github.com/mohitkap12-a11y/Better-Terminal/edit/main/docs/site-src/panes-layouts.md">Edit this page on GitHub</a></p>
+  </article>
+  <aside class="dtoc" aria-label="On this page"><div class="dt">On this page</div><a href="#choosing-a-layout">Choosing a layout</a><a href="#fit">The grid fits your tabs</a><a href="#split">Split panes</a><a href="#moving-between-panes">Moving between panes</a><a href="#swapping-panes">Swapping panes</a><a href="#pane-header">Pane header</a><a href="#broadcast">Broadcast</a></aside>
+</div></main>
+<footer><div class="wrap"><span>© Better Terminal · open source</span><span class="flinks"><a href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal/releases">Releases</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal/issues">Issues</a><a href="./">Docs</a><a href="../support.html">Support</a></span></div></footer>
+<script src="../script.js"></script>
+</body></html>

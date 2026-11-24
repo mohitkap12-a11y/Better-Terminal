@@ -56,3 +56,31 @@ private struct MiddleClickCatcher: NSViewRepresentable {
         }
     }
 }
+
+/// Hosts SwiftUI content in its own hosting view that never drags the window. The window uses a hidden title
+/// bar, so the strip where the tabs live counts as "title bar": pressing on a tab to drag it used to move the
+/// whole window. (`WindowDragArea` inside the content still lets the empty part of the strip move the window.)
+struct NoWindowDrag<Content: View>: NSViewRepresentable {
+    @Environment(AppModel.self) private var model
+    @Environment(\.theme) private var theme
+    @Environment(\.colorScheme) private var scheme
+    private let content: Content
+
+    init(@ViewBuilder _ content: () -> Content) { self.content = content() }
+
+    final class Host: NSHostingView<AnyView> {
+        override var mouseDownCanMoveWindow: Bool { false }
+    }
+
+    private var wrapped: AnyView {
+        AnyView(content.environment(model).environment(\.theme, theme).environment(\.colorScheme, scheme))
+    }
+
+    func makeNSView(context: Context) -> Host {
+        let host = Host(rootView: wrapped)
+        host.sizingOptions = []
+        return host
+    }
+
+    func updateNSView(_ host: Host, context: Context) { host.rootView = wrapped }
+}

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Workspaces and tabs | Better Terminal docs</title>
+<meta name="description" content="A workspace is a named group of tabs with its own layout. Use one per project: a workspace for the website, one for the API, one for ops.">
+<meta property="og:title" content="Workspaces and tabs | Better Terminal docs"><meta property="og:type" content="website">
+<meta property="og:image" content="https://mohitkap12-a11y.github.io/Better-Terminal/assets/og.png">
+<link rel="icon" href="../assets/favicon.png"><link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../styles.css">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site"><div class="wrap"><div class="bar">
+  <a class="brand" href="../index.html"><img src="../assets/icon-512.png" alt="">Better Terminal</a>
+  <nav class="links">
+    <a class="hide-sm" href="../index.html#features">Features</a><a class="hide-sm" href="./">Docs</a><a class="hide-sm" href="../support.html">Support</a><a class="hide-sm" href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a>
+    <button class="icon-btn" id="theme-toggle" aria-label="Switch light and dark theme"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+    <button class="icon-btn menu-btn" id="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu"><svg class="ico-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><svg class="ico-close" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </nav>
+  <div class="mobile-menu" id="mobile-menu" hidden><a href="../index.html#features">Features</a><a href="./">Docs</a><a href="../support.html">Support</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a><a class="btn primary" href="https://github.com/mohitkap12-a11y/Better-Terminal/releases/latest/download/BetterTerminal.dmg">Download for macOS</a></div>
+</div></div></header>
+
+<main id="main"><div class="wrap docs">
+  <aside class="dnav" aria-label="Documentation"><details class="dmob"><summary>Documentation menu</summary><div class="dg"><div class="dt">Start</div><a href="./">Documentation</a><a href="install.html">Install and update</a><a href="features.html">Features at a glance</a></div><div class="dg"><div class="dt">Organise</div><a href="workspaces-tabs.html" aria-current="page">Workspaces and tabs</a><a href="panes-layouts.html">Panes and layouts</a><a href="templates.html">Workspace templates</a><a href="resume.html">Resume on relaunch</a></div><div class="dg"><div class="dt">Find</div><a href="history-search.html">Command history and search</a><a href="terminal.html">Using the terminal</a><a href="notifications.html">Tab status and notifications</a><a href="quick-terminal.html">Quick terminal</a></div><div class="dg"><div class="dt">Look</div><a href="themes.html">Themes and fonts</a></div><div class="dg"><div class="dt">Under the hood</div><a href="shell-integration.html">Shell integration</a><a href="data-privacy.html">Your data and privacy</a></div><div class="dg"><div class="dt">Reference</div><a href="shortcuts.html">Keyboard shortcuts</a><a href="settings.html">Settings reference</a><a href="troubleshooting.html">Troubleshooting</a></div></details><div class="dside"><div class="dg"><div class="dt">Start</div><a href="./">Documentation</a><a href="install.html">Install and update</a><a href="features.html">Features at a glance</a></div><div class="dg"><div class="dt">Organise</div><a href="workspaces-tabs.html" aria-current="page">Workspaces and tabs</a><a href="panes-layouts.html">Panes and layouts</a><a href="templates.html">Workspace templates</a><a href="resume.html">Resume on relaunch</a></div><div class="dg"><div class="dt">Find</div><a href="history-search.html">Command history and search</a><a href="terminal.html">Using the terminal</a><a href="notifications.html">Tab status and notifications</a><a href="quick-terminal.html">Quick terminal</a></div><div class="dg"><div class="dt">Look</div><a href="themes.html">Themes and fonts</a></div><div class="dg"><div class="dt">Under the hood</div><a href="shell-integration.html">Shell integration</a><a href="data-privacy.html">Your data and privacy</a></div><div class="dg"><div class="dt">Reference</div><a href="shortcuts.html">Keyboard shortcuts</a><a href="settings.html">Settings reference</a><a href="troubleshooting.html">Troubleshooting</a></div></div></aside>
+  <article class="dbody">
+    <p class="crumbs"><a href="../index.html">Home</a> › <a href="./">Docs</a> › Workspaces and tabs</p>
+<h1>Workspaces and tabs</h1>
+<p>A <strong>workspace</strong> is a named group of tabs with its own layout. Use one per project: a workspace for the website, one for the API, one for ops.</p>
+<p>A <strong>tab</strong> is one shell. Every tab is also a pane: the tabs of a workspace are shown side by side according to the <a href="panes-layouts.html">layout</a>.</p>
+<h2 id="the-sidebar">The sidebar<a class="anchor" href="#the-sidebar" aria-label="Link to this section">#</a></h2>
+<p>The sidebar lists your workspaces, each with its tabs underneath.</p>
+<ul><li>Click a workspace to open it, or click any tab to jump straight to it, even in another workspace.</li><li>Switch workspaces from the keyboard with ⌃⌘1 to ⌃⌘9.</li><li>Collapse the sidebar to a narrow rail with the chevron at the top. It starts collapsed on a fresh install.</li><li>Fold the whole list from the <strong>WORKSPACES</strong> heading, or fold one workspace's tabs with the chevron on its row (or <strong>Hide Tabs</strong> in its menu). The sidebar remembers what you folded.</li></ul>
+<h2 id="workspace-menu">Workspace menu<a class="anchor" href="#workspace-menu" aria-label="Link to this section">#</a></h2>
+<p>Right-click a workspace for:</p>
+<div class="tbl"><table><thead><tr><th>Item</th><th>What it does</th></tr></thead><tbody><tr><td>New Terminal</td><td>Adds a tab to that workspace and opens it.</td></tr><tr><td>Save as Template</td><td>Saves its layout and folders as a <a href="templates.html">template</a>.</td></tr><tr><td>Rename…</td><td>Renames the workspace.</td></tr><tr><td>Color</td><td>Changes its colour badge.</td></tr><tr><td>Hide Tabs / Show Tabs</td><td>Folds its tab list in the sidebar.</td></tr><tr><td>Delete…</td><td>Deletes the workspace, its tabs and their history. You always keep at least one workspace.</td></tr></tbody></table></div>
+<p>Drag workspaces in the sidebar to reorder them.</p>
+<h2 id="tabs">Tabs<a class="anchor" href="#tabs" aria-label="Link to this section">#</a></h2>
+<ul><li><strong>New tab</strong>: ⌘T, the <strong>+</strong> button, or the command palette. New tabs open in the folder of the previous tab and follow the workspace layout.</li><li><strong>Rename</strong>: double-click the tab, or right-click ▸ Rename…. Leave the name empty to go back to the title the shell sets.</li><li><strong>Reorder</strong>: drag a tab in the tab bar.</li><li><strong>Move to another workspace</strong>: drag it onto a workspace in the sidebar, or right-click ▸ Move to Workspace. Its shell, history and saved text move with it. Dropping it on <strong>New Workspace</strong> creates a workspace for it.</li><li><strong>Close</strong>: ⌘W, the ✕ on the tab, middle-click, or right-click ▸ Close Tab. A workspace always keeps at least one tab.</li></ul>
+<h3 id="closing-a-tab-that-is-busy">Closing a tab that is busy<a class="anchor" href="#closing-a-tab-that-is-busy" aria-label="Link to this section">#</a></h3>
+<p>If a command is still running in the tab, Better Terminal asks before closing it, because closing stops the command. The alert has a <strong>Don't ask me again</strong> checkbox. You can turn the question back on in Settings ▸ Terminal ▸ <strong>Confirm before closing a busy tab</strong>.</p>
+<p>"Busy" means a command started and has not finished, which the <a href="shell-integration.html">shell integration</a> reports. A tab sitting at an empty prompt closes without asking.</p>
+<h2 id="tab-titles">Tab titles<a class="anchor" href="#tab-titles" aria-label="Link to this section">#</a></h2>
+<p>Tabs show the title your shell sets (usually the folder or the running command). Once you rename a tab, that name stays until you clear it.</p>
+<nav class="pn"><a class="prev" href="features.html"><small>Previous</small>Features at a glance</a><a class="next" href="panes-layouts.html"><small>Next</small>Panes and layouts</a></nav>
+    <p class="edit"><a href="https://github.com/mohitkap12-a11y/Better-Terminal/edit/main/docs/site-src/workspaces-tabs.md">Edit this page on GitHub</a></p>
+  </article>
+  <aside class="dtoc" aria-label="On this page"><div class="dt">On this page</div><a href="#the-sidebar">The sidebar</a><a href="#workspace-menu">Workspace menu</a><a href="#tabs">Tabs</a><a href="#tab-titles">Tab titles</a></aside>
+</div></main>
+<footer><div class="wrap"><span>© Better Terminal · open source</span><span class="flinks"><a href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal/releases">Releases</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal/issues">Issues</a><a href="./">Docs</a><a href="../support.html">Support</a></span></div></footer>
+<script src="../script.js"></script>
+</body></html>

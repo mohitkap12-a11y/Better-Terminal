@@ -11,17 +11,23 @@ struct Walkthrough: View {
     private struct Page { let title: String; let text: String }
     private let pages: [Page] = [
         Page(title: "Welcome to Better Terminal",
-             text: "A fast, modern terminal for your Mac. Here is a 30-second tour."),
-        Page(title: "Workspaces",
-             text: "Keep each project in its own workspace, with its own tabs and layout. Switch from the sidebar or with ⌃⌘1–9. Everything is restored when you reopen the app."),
-        Page(title: "Pane layouts",
-             text: "Tabs fill a grid. Pick 1×2, 2×1, 2×2 or your own from the layout button (⌥⌘L). New tabs follow the layout. Move between panes with ⌘ and the arrow keys."),
+             text: "A fast, modern terminal for your Mac. Here is a one-minute tour of what it can do."),
+        Page(title: "Workspaces and templates",
+             text: "Keep each project in its own workspace, with its own tabs and layout. Switch from the sidebar or with ⌃⌘1–9, drag to reorder, middle-click a tab to close it. Save a setup as a template and open it again in one click."),
+        Page(title: "Pane layouts and splits",
+             text: "Tabs fill a grid: 1×2, 2×1, 2×2 or your own (⌥⌘L). Split the current pane with ⌘D or ⇧⌘D, swap panes by dragging a header onto another, and move between them with ⌘ and the arrow keys. The grid shrinks to fit when you close tabs."),
         Page(title: "History for every tab",
              text: "Press ⇧⌘H or the clock button on a pane. Type to search, ↑↓ to move, ⏎ to put the command at the prompt, ⌘⏎ to run it."),
         Page(title: "Command palette",
-             text: "Press ⌘K to jump anywhere: workspaces, layouts, themes, history, settings."),
+             text: "Press ⌘K to jump anywhere. Your last three commands are at the top. Press → for the Commands tab: the last 30 commands from every terminal, searchable. ← goes back to Actions."),
+        Page(title: "Find, links and right-click",
+             text: "⌘F searches the scrollback. Links underline when you hover them, and right-click gives you copy, paste, open link, find, split and more. ⌥⌘C copies the last command's output."),
+        Page(title: "Know when it's done",
+             text: "A spinner shows while a command runs and a red dot marks a failed one. When a long command finishes in another tab, you get a notification. ⌥⌘I broadcasts what you type to every pane."),
+        Page(title: "Quick terminal",
+             text: "Turn it on in Settings, then press ⌃` from any app to drop a terminal down from the top of the screen. Press it again to hide. You can choose another key."),
         Page(title: "Make it yours",
-             text: "Pick a soft colour theme in Settings. Select text and right-click to copy. Updates arrive in the app.")
+             text: "Pick a soft colour theme, or import an iTerm2, Ghostty or kitty theme. Choose any monospaced font. Every feature is explained in the documentation on the website.")
     ]
     private var last: Bool { page == pages.count - 1 }
 
@@ -37,7 +43,7 @@ struct Walkthrough: View {
                     Text(pages[page].title).font(.system(size: 22, weight: .semibold))
                     Text(pages[page].text).font(.system(size: 13.5)).foregroundStyle(theme.muted)
                         .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: 420)
+                        .frame(maxWidth: 460)
                 }
                 .id(page)
                 .transition(.opacity)
@@ -60,7 +66,7 @@ struct Walkthrough: View {
                 }
                 .padding(.horizontal, 24).padding(.bottom, 20)
             }
-            .frame(width: 560, height: 470)
+            .frame(width: 580, height: 510)
             .background(theme.groundColor, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(theme.border))
             .shadow(color: .black.opacity(0.3), radius: 30, y: 12)
@@ -110,6 +116,24 @@ struct Walkthrough: View {
             HStack(spacing: 10) {
                 keycap("⌘"); keycap("K")
                 Text("Search anything").foregroundStyle(theme.muted)
+                keycap("→")
+                Text("Commands").foregroundStyle(theme.muted)
+            }
+        case 5:
+            HStack(spacing: 10) {
+                keycap("⌘"); keycap("F")
+                Text("Find in terminal").foregroundStyle(theme.muted)
+            }
+        case 6:
+            HStack(spacing: 22) {
+                HStack(spacing: 8) { ProgressView().controlSize(.small); Text("running").foregroundStyle(theme.muted) }
+                HStack(spacing: 8) { Circle().fill(Color.red).frame(width: 9, height: 9); Text("failed").foregroundStyle(theme.muted) }
+                HStack(spacing: 8) { Image(systemName: "bell.badge").foregroundStyle(theme.accent); Text("finished").foregroundStyle(theme.muted) }
+            }
+        case 7:
+            HStack(spacing: 10) {
+                keycap("⌃"); keycap("`")
+                Text("from any app").foregroundStyle(theme.muted)
             }
         default:
             HStack(spacing: 10) {

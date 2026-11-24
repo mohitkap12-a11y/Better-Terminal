@@ -49,6 +49,8 @@ struct RootView: View {
             if !walkthroughSeen { model.walkthroughOpen = true }
         }
         .onChange(of: model.state.themeMode) { model.applyAppearance() }
+        .onChange(of: model.state.themeID) { model.applyAppearance() }
+        .onChange(of: model.state.customThemes) { model.applyAppearance() }
     }
 }
 
@@ -58,7 +60,9 @@ struct WorkspaceView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TabBar(workspace: workspace)
+            NoWindowDrag { TabBar(workspace: workspace) }
+                .frame(maxWidth: .infinity)
+                .frame(height: 40)
             Divider()
             PaneGrid(workspace: workspace)
         }

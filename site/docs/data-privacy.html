@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your data and privacy | Better Terminal docs</title>
+<meta name="description" content="Better Terminal has no account, no analytics and no telemetry. The only network request it makes is the update check, which goes to GitHub.">
+<meta property="og:title" content="Your data and privacy | Better Terminal docs"><meta property="og:type" content="website">
+<meta property="og:image" content="https://mohitkap12-a11y.github.io/Better-Terminal/assets/og.png">
+<link rel="icon" href="../assets/favicon.png"><link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../styles.css">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site"><div class="wrap"><div class="bar">
+  <a class="brand" href="../index.html"><img src="../assets/icon-512.png" alt="">Better Terminal</a>
+  <nav class="links">
+    <a class="hide-sm" href="../index.html#features">Features</a><a class="hide-sm" href="./">Docs</a><a class="hide-sm" href="../support.html">Support</a><a class="hide-sm" href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a>
+    <button class="icon-btn" id="theme-toggle" aria-label="Switch light and dark theme"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+    <button class="icon-btn menu-btn" id="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu"><svg class="ico-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><svg class="ico-close" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </nav>
+  <div class="mobile-menu" id="mobile-menu" hidden><a href="../index.html#features">Features</a><a href="./">Docs</a><a href="../support.html">Support</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a><a class="btn primary" href="https://github.com/mohitkap12-a11y/Better-Terminal/releases/latest/download/BetterTerminal.dmg">Download for macOS</a></div>
+</div></div></header>
+
+<main id="main"><div class="wrap docs">
+  <aside class="dnav" aria-label="Documentation"><details class="dmob"><summary>Documentation menu</summary><div class="dg"><div class="dt">Start</div><a href="./">Documentation</a><a href="install.html">Install and update</a><a href="features.html">Features at a glance</a></div><div class="dg"><div class="dt">Organise</div><a href="workspaces-tabs.html">Workspaces and tabs</a><a href="panes-layouts.html">Panes and layouts</a><a href="templates.html">Workspace templates</a><a href="resume.html">Resume on relaunch</a></div><div class="dg"><div class="dt">Find</div><a href="history-search.html">Command history and search</a><a href="terminal.html">Using the terminal</a><a href="notifications.html">Tab status and notifications</a><a href="quick-terminal.html">Quick terminal</a></div><div class="dg"><div class="dt">Look</div><a href="themes.html">Themes and fonts</a></div><div class="dg"><div class="dt">Under the hood</div><a href="shell-integration.html">Shell integration</a><a href="data-privacy.html" aria-current="page">Your data and privacy</a></div><div class="dg"><div class="dt">Reference</div><a href="shortcuts.html">Keyboard shortcuts</a><a href="settings.html">Settings reference</a><a href="troubleshooting.html">Troubleshooting</a></div></details><div class="dside"><div class="dg"><div class="dt">Start</div><a href="./">Documentation</a><a href="install.html">Install and update</a><a href="features.html">Features at a glance</a></div><div class="dg"><div class="dt">Organise</div><a href="workspaces-tabs.html">Workspaces and tabs</a><a href="panes-layouts.html">Panes and layouts</a><a href="templates.html">Workspace templates</a><a href="resume.html">Resume on relaunch</a></div><div class="dg"><div class="dt">Find</div><a href="history-search.html">Command history and search</a><a href="terminal.html">Using the terminal</a><a href="notifications.html">Tab status and notifications</a><a href="quick-terminal.html">Quick terminal</a></div><div class="dg"><div class="dt">Look</div><a href="themes.html">Themes and fonts</a></div><div class="dg"><div class="dt">Under the hood</div><a href="shell-integration.html">Shell integration</a><a href="data-privacy.html" aria-current="page">Your data and privacy</a></div><div class="dg"><div class="dt">Reference</div><a href="shortcuts.html">Keyboard shortcuts</a><a href="settings.html">Settings reference</a><a href="troubleshooting.html">Troubleshooting</a></div></div></aside>
+  <article class="dbody">
+    <p class="crumbs"><a href="../index.html">Home</a> › <a href="./">Docs</a> › Your data and privacy</p>
+<h1>Your data and privacy</h1>
+<p>Better Terminal has no account, no analytics and no telemetry. The only network request it makes is the update check, which goes to GitHub.</p>
+<h2 id="where-things-are-stored">Where things are stored<a class="anchor" href="#where-things-are-stored" aria-label="Link to this section">#</a></h2>
+<p>Everything lives under <code>~/Library/Application Support/BetterTerminal</code>:</p>
+<div class="tbl"><table><thead><tr><th>Path</th><th>Contents</th></tr></thead><tbody><tr><td><code>state.json</code></td><td>Workspaces, tabs, layouts, templates, imported themes and settings.</td></tr><tr><td><code>history/&lt;tab&gt;.jsonl</code></td><td>The commands of each tab (command, folder, exit status, time, duration). No output.</td></tr><tr><td><code>snapshots/&lt;tab&gt;.txt</code></td><td>The text of each terminal, for <a href="resume.html">resume</a>. Can contain anything you printed.</td></tr><tr><td><code>shell-integration/</code></td><td>The hook scripts for <a href="shell-integration.html">shell integration</a>.</td></tr><tr><td><code>events/</code></td><td>Temporary per-tab event files, removed when a tab closes.</td></tr></tbody></table></div>
+<p>Logs are in <code>~/Library/Logs/BetterTerminal</code>:</p>
+<div class="tbl"><table><thead><tr><th>File</th><th>Contents</th></tr></thead><tbody><tr><td><code>app.log</code></td><td>Launches, errors and a few events (for example, whether the quick terminal key registered). Rotated at 1 MB.</td></tr><tr><td><code>crash.log</code></td><td>A note when the app crashes on a fatal signal.</td></tr></tbody></table></div>
+<p>The logs never contain commands or terminal text.</p>
+<h2 id="controls">Controls<a class="anchor" href="#controls" aria-label="Link to this section">#</a></h2>
+<ul><li>Turn off <strong>Resume on relaunch</strong> to stop saving terminal text (turning it off also deletes the saved text).</li><li><strong>Saved terminal text ▸ Clear</strong> deletes snapshots at any time.</li><li>Closing a tab deletes its history and text; deleting a workspace deletes those of all its tabs.</li><li>To remove everything, quit the app and delete the two folders above.</li></ul>
+<h2 id="what-leaves-your-mac">What leaves your Mac<a class="anchor" href="#what-leaves-your-mac" aria-label="Link to this section">#</a></h2>
+<p>Only the update check: a request for the appcast file on GitHub, which includes the app version. Downloads of new versions come from GitHub Releases. Notifications for long commands are local. Nothing in the app sends your commands, output or folders anywhere.</p>
+<nav class="pn"><a class="prev" href="shell-integration.html"><small>Previous</small>Shell integration</a><a class="next" href="shortcuts.html"><small>Next</small>Keyboard shortcuts</a></nav>
+    <p class="edit"><a href="https://github.com/mohitkap12-a11y/Better-Terminal/edit/main/docs/site-src/data-privacy.md">Edit this page on GitHub</a></p>
+  </article>
+  <aside class="dtoc" aria-label="On this page"><div class="dt">On this page</div><a href="#where-things-are-stored">Where things are stored</a><a href="#controls">Controls</a><a href="#what-leaves-your-mac">What leaves your Mac</a></aside>
+</div></main>
+<footer><div class="wrap"><span>© Better Terminal · open source</span><span class="flinks"><a href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal/releases">Releases</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal/issues">Issues</a><a href="./">Docs</a><a href="../support.html">Support</a></span></div></footer>
+<script src="../script.js"></script>
+</body></html>

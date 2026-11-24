@@ -22,21 +22,32 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/app-dark.png" alt="Better Terminal with three panes side by side in a 1×3 layout" width="860">
+  <img src="docs/images/app-dark.png" alt="Better Terminal in dark mode: six terminal panes, a sidebar with several workspaces and their tabs" width="860">
 </p>
+<p align="center">
+  <img src="docs/images/app-light.png" alt="The same window in light mode" width="860">
+</p>
+
+<p align="center"><a href="https://mohitkap12-a11y.github.io/Better-Terminal/docs/"><b>Read the documentation →</b></a></p>
 
 ## Features
 
 - **Workspaces.** One per project, each with its own tabs, layout and folders. Switch from the sidebar or with `⌃⌘1–9`.
 - **Collapsible sidebar.** Fold the whole workspace list, or each workspace's tabs; the sidebar remembers it.
 - **Drag to organise.** Reorder workspaces and tabs by dragging, drop a tab on a workspace to move it, right-click a tab to rename it or move it to another workspace.
-- **Pane layouts.** Tabs fill a grid: 1×2, 2×1, 2×2 or any custom rows × columns. New tabs follow the layout.
+- **Pane layouts.** Tabs fill a grid: 1×2, 2×1, 2×2 or any custom rows × columns. New tabs follow the layout, and the grid shrinks to fit when you have fewer tabs than slots.
+- **Split panes.** `⌘D` splits right, `⇧⌘D` splits down. Drag a pane header onto another pane to swap them.
+- **Workspace templates.** Save a layout, folders and startup commands; open the whole setup in one click.
 - **History for every tab.** Click the clock (or `⇧⌘H`), type to search, `↑↓` to move, `⏎` to insert, `⌘⏎` to run. Right-click a command to copy it or run it again.
 - **Move between panes.** `⌘` + arrow keys jump to the neighbouring terminal; the pane you land on pulses.
 - **Resume on relaunch.** Quit and reopen: workspaces, tabs, layouts, folders, history and the text on screen come back. A fresh shell starts below it (running programs can't be revived). Switch it off in Settings if you handle secrets.
-- **Command palette.** `⌘K` for workspaces, layouts, themes, settings and past commands.
-- **Soft colour themes.** Default, Mist, Sage, Rose, Lavender, Sand, Nord, Black, in light and dark. System follows macOS.
-- **Right-click copies** selected text.
+- **Command palette.** `⌘K` for actions, with your last three commands on top. Press `→` for the last 30 commands from every terminal, searchable.
+- **Find in terminal.** `⌘F` with highlighted matches; `⌘G` / `⇧⌘G` to step through them.
+- **Tab status and notifications.** A spinner while a command runs, a red dot when one failed, and a notification when a long command finishes in another tab.
+- **Broadcast input.** `⌥⌘I` repeats your typing in every pane of the workspace.
+- **Quick terminal.** A global key (`⌃`` by default) drops a terminal down from the top of the screen.
+- **Right-click menu and links.** Copy, paste, open link, find, split; links underline on hover. `⌥⌘C` copies the last command's output.
+- **Soft colour themes.** Default, Mist, Sage, Rose, Lavender, Sand, Nord, Black, in light and dark. System follows macOS. Import iTerm2, Ghostty and kitty themes, and pick any monospaced font.
 - **Updates built in** ([Sparkle](https://sparkle-project.org)), Stable by default or Beta in Settings.
 - **Private.** No account and no telemetry; the only network call is the update check.
 
@@ -53,7 +64,12 @@ Requires macOS 14 Sonoma or later. Apple silicon and Intel.
 | --- | --- |
 | New tab / close tab | `⌘T` / `⌘W` |
 | Move between panes | `⌘←` `⌘→` `⌘↑` `⌘↓` |
-| Command palette | `⌘K` |
+| Split right / down | `⌘D` / `⇧⌘D` |
+| Find / next / previous | `⌘F` / `⌘G` / `⇧⌘G` |
+| Broadcast to all panes | `⌥⌘I` |
+| Copy last command output | `⌥⌘C` |
+| Quick terminal | `⌃`` (changeable in Settings) |
+| Command palette (→ for Commands) | `⌘K` |
 | Command history | `⇧⌘H` |
 | Pane layout | `⌥⌘L` |
 | New workspace | `⇧⌘N` |
@@ -86,7 +102,13 @@ Tag-driven: `v1.2.3` is a stable release, `v1.2.3-beta.1` goes to the Beta chann
 
 ## Website
 
-The site in [`site/`](site) is plain HTML and CSS, deployed to GitHub Pages by `.github/workflows/pages.yml`. The hero shows the real screenshots in `site/assets/screenshots/`. Retake them with `scripts/screenshot.sh dark` (and `light`) on a Mac with the app open; delete the PNGs to fall back to the built-in illustration.
+The site in [`site/`](site) is plain HTML and CSS, deployed to GitHub Pages by `.github/workflows/pages.yml`. The hero shows the real screenshots in `site/assets/screenshots/`.
+
+To make new screenshots, capture the whole window on a Mac (`scripts/screenshot.sh dark` and `light`, or any capture), then run `python3 scripts/redact-screenshots.py dark in.png site/assets/screenshots/app-dark.png` (and `light`). It replaces the text in the six panes and the folder paths in the pane headers with generic sample content, so no real names or paths are published. Copy the results to `docs/images/` for this README.
+
+### Documentation
+
+The docs are Markdown in [`docs/site-src`](docs/site-src). After editing, run `node scripts/build-docs.js` to regenerate `site/docs/*.html` and commit both.
 
 ## Support
 

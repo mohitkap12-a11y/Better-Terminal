@@ -17,10 +17,14 @@ protocol TerminalSession: AnyObject {
     /// Search the scrollback; selects and scrolls to the match. Returns false when there is none.
     func find(_ term: String, forward: Bool) -> Bool
     func clearFind()
-    /// Everything the user types or pastes in this terminal (used for broadcasting).
+    /// Keys typed in this terminal, as the bytes the shell receives (used for broadcasting).
     var onInput: ((ArraySlice<UInt8>) -> Void)? { get set }
+    /// The user pasted into this terminal.
+    var onPaste: (() -> Void)? { get set }
     /// Sends bytes straight to the shell without reporting them to `onInput`.
     func sendRaw(_ data: ArraySlice<UInt8>)
+    /// Pastes the clipboard here without reporting it to `onPaste`.
+    func replayPaste()
     /// A command is running in the shell right now (not just an idle prompt).
     var hasRunningCommand: Bool { get }
     /// Plain text of the terminal (scrollback + screen), for restoring it after a relaunch.
@@ -71,13 +75,23 @@ final class EventFileTailer {
     deinit { source?.cancel() }
 }
 
-/// The SwiftTerm view, reporting user input so panes can mirror it.
+/// The SwiftTerm view. Reports pastes so panes can mirror them (typed keys are caught by an event monitor,
+/// because SwiftTerm sends them straight to the shell without calling the delegate).
 final class BTTerminalView: LocalProcessTerminalView {
-    var onInput: ((ArraySlice<UInt8>) -> Void)?
-    override func send(source: TerminalView, data: ArraySlice<UInt8>) {
-        onInput?(data)
-        super.send(source: source, data: data)
+    var onPaste: (() -> Void)?
+    var mirroring = false
+    override func paste(_ sender: Any) {
+        super.paste(sender)
+        if !mirroring { onPaste?() }
     }
+}
+
+enum TerminalMenuAction { case find, splitRight, splitDown, copyLastOutput }
+
+private final class MenuHandler: NSObject {
+    let block: () -> Void
+    init(_ block: @escaping () -> Void) { self.block = block }
+    @objc func fire() { block() }
 }
 
 final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalViewDelegate {
@@ -90,6 +104,10 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
         var onRunning: @MainActor (Bool) -> Void = { _ in }
         /// The shell finished its start-up files and showed its first prompt.
         var onReady: @MainActor () -> Void = {}
+        /// Right-click on selected text copies it straight away instead of showing the menu.
+        var rightClickCopies: @MainActor () -> Bool = { false }
+        /// An item of the terminal's right-click menu that the app handles (find, split, copy output).
+        var onMenu: @MainActor (TerminalMenuAction) -> Void = { _ in }
     }
 
     private let view = BTTerminalView(frame: .zero)
@@ -106,10 +124,13 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
     private var outputStart = 0
     private var ready = false
     private(set) var lastOutput: String?
-    var onInput: ((ArraySlice<UInt8>) -> Void)? {
-        get { view.onInput }
-        set { view.onInput = newValue }
+    var onInput: ((ArraySlice<UInt8>) -> Void)?
+    var onPaste: (() -> Void)? {
+        get { view.onPaste }
+        set { view.onPaste = newValue }
     }
+    private var keyMonitor: Any?
+    private var menuHandlers: [MenuHandler] = []
 
     init(tab: TerminalTab, integrationDir: URL, eventFile: URL, restoredText: String? = nil, callbacks: Callbacks) {
         self.tracker = CommandTracker(cwd: tab.cwd)
@@ -133,14 +154,32 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
             return event
         }
 
-        // Right-click on selected text copies it (instead of opening a menu).
+        // Right-click: a context menu (copy, paste, select all, open link, find, split, clear),
+        // or copy straight away when the setting says so and text is selected.
         rightClickMonitor = NSEvent.addLocalMonitorForEvents(matching: .rightMouseDown) { [weak self] event in
             guard let self, let w = self.view.window, event.window === w,
-                  self.view.bounds.contains(self.view.convert(event.locationInWindow, from: nil)),
-                  self.view.selectionActive else { return event }
-            self.view.copy(self)
+                  self.view.bounds.contains(self.view.convert(event.locationInWindow, from: nil)) else { return event }
+            if self.view.selectionActive, MainActor.assumeIsolated({ callbacks.rightClickCopies() }) {
+                self.view.copy(self)
+                return nil
+            }
+            self.showContextMenu(for: event)
             return nil
         }
+
+        // Typed keys, for broadcasting to other panes. Only while this terminal has the keyboard.
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            // Monitors see every key in the app, so also require the event to belong to this terminal's window
+            // (typing in the quick terminal must not reach the main window's panes).
+            guard let self, let handler = self.onInput, let window = self.view.window, event.window === window,
+                  window.firstResponder === self.view,
+                  let bytes = KeyBytes.bytes(for: event) else { return event }
+            handler(bytes[...])
+            return event
+        }
+
+        // Underline links when hovered; click one to open it.
+        view.linkHighlightMode = .hover
 
         tailer = EventFileTailer(url: eventFile) { [weak self] line in self?.handle(line) }
 
@@ -219,6 +258,82 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
 
     func sendRaw(_ data: ArraySlice<UInt8>) { view.process?.send(data: data) }
 
+    func replayPaste() {
+        view.mirroring = true
+        view.paste(self)
+        view.mirroring = false
+    }
+
+    // MARK: Right-click menu
+
+    private static let urlPattern = try? NSRegularExpression(pattern: #"(?:https?|file)://[^\s<>"'`]+"#)
+
+    /// URLs in `text`, trailing punctuation removed, newest (last) first, without duplicates.
+    static func urls(in text: String, limit: Int = 8) -> [URL] {
+        guard let re = urlPattern else { return [] }
+        let ns = text as NSString
+        var seen = Set<String>(), out: [URL] = []
+        for m in re.matches(in: text, range: NSRange(location: 0, length: ns.length)).reversed() {
+            var s = ns.substring(with: m.range)
+            while let last = s.last, ".,;:!?)]}>".contains(last) { s.removeLast() }
+            if seen.insert(s).inserted, let u = URL(string: s) { out.append(u) }
+            if out.count == limit { break }
+        }
+        return out
+    }
+
+    private func showContextMenu(for event: NSEvent) {
+        let menu = NSMenu()
+        menuHandlers = []
+        func add(_ title: String, key: String = "", enabled: Bool = true, _ block: @escaping () -> Void) {
+            let h = MenuHandler(block)
+            menuHandlers.append(h)
+            let item = NSMenuItem(title: title, action: #selector(MenuHandler.fire), keyEquivalent: key)
+            item.target = h
+            item.isEnabled = enabled
+            menu.addItem(item)
+        }
+        let hasSelection = view.selectionActive
+        add("Copy", key: "c", enabled: hasSelection) { [weak self] in
+            if let v = self?.view { v.copy(v) }
+        }
+        add("Paste", key: "v") { [weak self] in
+            if let v = self?.view { v.paste(v) }
+        }
+        add("Select All", key: "a") { [weak self] in self?.view.selectAll() }
+
+        // Links: the selection if it is one, otherwise the URLs on screen.
+        var links: [URL] = []
+        if hasSelection, let sel = view.getSelection(), let u = Self.urls(in: sel, limit: 1).first { links = [u] }
+        if links.isEmpty { links = Self.urls(in: String(snapshotText().suffix(8000))) }
+        if links.count == 1, let url = links.first {
+            menu.addItem(.separator())
+            add("Open \(url.host ?? url.absoluteString)…") { NSWorkspace.shared.open(url) }
+        } else if links.count > 1 {
+            menu.addItem(.separator())
+            let sub = NSMenu()
+            for url in links {
+                let h = MenuHandler { NSWorkspace.shared.open(url) }
+                menuHandlers.append(h)
+                let item = NSMenuItem(title: url.absoluteString.count > 60 ? String(url.absoluteString.prefix(57)) + "…" : url.absoluteString,
+                                      action: #selector(MenuHandler.fire), keyEquivalent: "")
+                item.target = h
+                sub.addItem(item)
+            }
+            let parent = NSMenuItem(title: "Open Link", action: nil, keyEquivalent: "")
+            parent.submenu = sub
+            menu.addItem(parent)
+        }
+
+        menu.addItem(.separator())
+        add("Find…", key: "f") { [callbacks = self.callbacks] in Task { @MainActor in callbacks.onMenu(.find) } }
+        add("Split Right") { [callbacks = self.callbacks] in Task { @MainActor in callbacks.onMenu(.splitRight) } }
+        add("Split Down") { [callbacks = self.callbacks] in Task { @MainActor in callbacks.onMenu(.splitDown) } }
+        add("Copy Last Command Output", enabled: lastOutput != nil) { [callbacks = self.callbacks] in Task { @MainActor in callbacks.onMenu(.copyLastOutput) } }
+        add("Clear Screen") { [weak self] in self?.view.send(txt: "\u{0C}") }
+        NSMenu.popUpContextMenu(menu, with: event, for: view)
+    }
+
     func snapshotText() -> String {
         String(decoding: view.getBufferAsData(kind: .normal), as: UTF8.self)
     }
@@ -226,6 +341,7 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
     func terminate() {
         if let m = clickMonitor { NSEvent.removeMonitor(m); clickMonitor = nil }
         if let m = rightClickMonitor { NSEvent.removeMonitor(m); rightClickMonitor = nil }
+        if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil }
         tailer?.stop(); tailer = nil
         view.terminate()
     }
@@ -233,6 +349,7 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
     deinit {
         if let m = clickMonitor { NSEvent.removeMonitor(m) }
         if let m = rightClickMonitor { NSEvent.removeMonitor(m) }
+        if let m = keyMonitor { NSEvent.removeMonitor(m) }
     }
 
     // MARK: LocalProcessTerminalViewDelegate
