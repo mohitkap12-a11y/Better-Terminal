@@ -3,6 +3,20 @@
 All notable changes. Release notes shown in the update window live in `docs/release-notes/`.
 
 ## [Unreleased]
+### Fixed
+- Broadcast input now repeats typing in the other panes (it needs the key events, which the terminal engine does not hand to the app).
+- Dragging a tab in the tab bar no longer moves the window: the tab strip is its own non-draggable host, and only the empty part of it moves the window.
+- Imported dark themes no longer give an unreadable window when the Mac or the Mode setting is light: an imported theme now decides light or dark, and the Mode control is dimmed with an explanation.
+- Removing an imported theme updates Settings immediately.
+
+### Added
+- Quick terminal key choice (⌃`, ⌥Space, ⌃⌥Space, F12), a status line saying whether the key registered, and a "Show now" button.
+- Command palette: Actions and Commands tabs (→ / ←), your last three commands on top, the last 30 commands from every terminal on the Commands tab, and wrap-around arrow keys.
+- Right-click menu in terminals (copy, paste, select all, open link, find, split, copy last output, clear). Links underline on hover. Setting "Right-click copies selected text" keeps the old behaviour.
+- All shortcuts listed in Settings, grouped.
+- Walkthrough covers the new features.
+- Documentation site (`/docs`), built from `docs/site-src`, and updated website and README with new screenshots.
+
 ### Added
 - Drag to reorder workspaces and tabs; drag a tab onto a workspace in the sidebar to move it there.
 - Right-click a tab (in the tab bar or the sidebar) to rename it, move it to another workspace or a new one, or close it. Double-click a tab to rename.

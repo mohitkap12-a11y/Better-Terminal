@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shell integration | Better Terminal docs</title>
+<meta name="description" content="Command history, tab status, notifications, "busy tab" confirmation, startup commands and Copy Last Output all depend on knowing when a command starts and ends.">
+<meta property="og:title" content="Shell integration | Better Terminal docs"><meta property="og:type" content="website">
+<meta property="og:image" content="https://mohitkap12-a11y.github.io/Better-Terminal/assets/og.png">
+<link rel="icon" href="../assets/favicon.png"><link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../styles.css">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site"><div class="wrap"><div class="bar">
+  <a class="brand" href="../index.html"><img src="../assets/icon-512.png" alt="">Better Terminal</a>
+  <nav class="links">
+    <a class="hide-sm" href="../index.html#features">Features</a><a class="hide-sm" href="./">Docs</a><a class="hide-sm" href="../support.html">Support</a><a class="hide-sm" href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a>
+    <button class="icon-btn" id="theme-toggle" aria-label="Switch light and dark theme"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+    <button class="icon-btn menu-btn" id="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu"><svg class="ico-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><svg class="ico-close" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </nav>
+  <div class="mobile-menu" id="mobile-menu" hidden><a href="../index.html#features">Features</a><a href="./">Docs</a><a href="../support.html">Support</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a><a class="btn primary" href="https://github.com/mohitkap12-a11y/Better-Terminal/releases/latest/download/BetterTerminal.dmg">Download for macOS</a></div>
+</div></div></header>
+
+<main id="main"><div class="wrap docs">
+  <aside class="dnav" aria-label="Documentation"><details class="dmob"><summary>Documentation menu</summary><div class="dg"><div class="dt">Start</div><a href="./">Documentation</a><a href="install.html">Install and update</a><a href="features.html">Features at a glance</a></div><div class="dg"><div class="dt">Organise</div><a href="workspaces-tabs.html">Workspaces and tabs</a><a href="panes-layouts.html">Panes and layouts</a><a href="templates.html">Workspace templates</a><a href="resume.html">Resume on relaunch</a></div><div class="dg"><div class="dt">Find</div><a href="history-search.html">Command history and search</a><a href="terminal.html">Using the terminal</a><a href="notifications.html">Tab status and notifications</a><a href="quick-terminal.html">Quick terminal</a></div><div class="dg"><div class="dt">Look</div><a href="themes.html">Themes and fonts</a></div><div class="dg"><div class="dt">Under the hood</div><a href="shell-integration.html" aria-current="page">Shell integration</a><a href="data-privacy.html">Your data and privacy</a></div><div class="dg"><div class="dt">Reference</div><a href="shortcuts.html">Keyboard shortcuts</a><a href="settings.html">Settings reference</a><a href="troubleshooting.html">Troubleshooting</a></div></details><div class="dside"><div class="dg"><div class="dt">Start</div><a href="./">Documentation</a><a href="install.html">Install and update</a><a href="features.html">Features at a glance</a></div><div class="dg"><div class="dt">Organise</div><a href="workspaces-tabs.html">Workspaces and tabs</a><a href="panes-layouts.html">Panes and layouts</a><a href="templates.html">Workspace templates</a><a href="resume.html">Resume on relaunch</a></div><div class="dg"><div class="dt">Find</div><a href="history-search.html">Command history and search</a><a href="terminal.html">Using the terminal</a><a href="notifications.html">Tab status and notifications</a><a href="quick-terminal.html">Quick terminal</a></div><div class="dg"><div class="dt">Look</div><a href="themes.html">Themes and fonts</a></div><div class="dg"><div class="dt">Under the hood</div><a href="shell-integration.html" aria-current="page">Shell integration</a><a href="data-privacy.html">Your data and privacy</a></div><div class="dg"><div class="dt">Reference</div><a href="shortcuts.html">Keyboard shortcuts</a><a href="settings.html">Settings reference</a><a href="troubleshooting.html">Troubleshooting</a></div></div></aside>
+  <article class="dbody">
+    <p class="crumbs"><a href="../index.html">Home</a> › <a href="./">Docs</a> › Shell integration</p>
+<h1>Shell integration</h1>
+<p>Command history, tab status, notifications, "busy tab" confirmation, startup commands and Copy Last Output all depend on knowing when a command starts and ends. Better Terminal gets that from small hook scripts that it loads into your shell. There is nothing to install or configure.</p>
+<h2 id="supported-shells">Supported shells<a class="anchor" href="#supported-shells" aria-label="Link to this section">#</a></h2>
+<div class="tbl"><table><thead><tr><th>Shell</th><th>How it is loaded</th></tr></thead><tbody><tr><td>zsh</td><td>Through a private <code>ZDOTDIR</code> that sources your own startup files first, then adds <code>preexec</code> and <code>precmd</code> hooks.</td></tr><tr><td>bash</td><td>Started with <code>--rcfile</code>; your <code>~/.bash_profile</code> (or <code>~/.bashrc</code> if there is no profile) is sourced, then hooks are added using <code>PROMPT_COMMAND</code> and a <code>DEBUG</code> trap.</td></tr><tr><td>fish</td><td>Started with <code>--init-command</code> that sources the hook script.</td></tr><tr><td>anything else</td><td>Runs normally, without history capture, badges or notifications.</td></tr></tbody></table></div>
+<p>Your own dotfiles are always read. For zsh, <code>ZDOTDIR</code> is restored for your startup files, and the original value is available as <code>BT_USER_ZDOTDIR</code>. zsh starts as a login shell (<code>-l</code>), like other macOS terminals.</p>
+<p>The hook scripts are written to <code>~/Library/Application Support/BetterTerminal/shell-integration/</code> when the app starts.</p>
+<h2 id="what-the-hooks-report">What the hooks report<a class="anchor" href="#what-the-hooks-report" aria-label="Link to this section">#</a></h2>
+<p>Each tab has a small event file. The shell appends one line per event:</p>
+<div class="tbl"><table><thead><tr><th>Event</th><th>When</th><th>Content</th></tr></thead><tbody><tr><td>Command started</td><td>Just before a command runs</td><td>The command text (base64).</td></tr><tr><td>Command finished</td><td>When the prompt returns</td><td>The exit status.</td></tr><tr><td>Folder</td><td>At every prompt</td><td>The current folder (base64).</td></tr></tbody></table></div>
+<p>The app watches that file and turns the events into history entries and status. The environment variable <code>BT_EVENT_FILE</code> holds the file's path inside the shell. The files are deleted when the tab closes.</p>
+<p>Nothing about a command's output is reported. Only the command text, exit status, folder and timing are used.</p>
+<h2 id="what-depends-on-it">What depends on it<a class="anchor" href="#what-depends-on-it" aria-label="Link to this section">#</a></h2>
+<ul><li><a href="history-search.html">Command history</a></li><li><a href="notifications.html">Tab status and notifications</a></li><li>Closing a <a href="workspaces-tabs.html#closing-a-tab-that-is-busy">busy tab</a> with confirmation</li><li><a href="templates.html">Template</a> startup commands: they wait for the first folder event, which means the shell reached its prompt.</li><li><a href="terminal.html#last-output">Copy last output</a></li></ul>
+<h2 id="limits">Limits<a class="anchor" href="#limits" aria-label="Link to this section">#</a></h2>
+<ul><li>Commands you start inside another program (SSH sessions, <code>docker exec</code>, REPLs) are one command from your shell's point of view.</li><li>If you replace <code>PROMPT_COMMAND</code> or the zsh hook arrays after startup, the hooks can be removed. Add to them instead of overwriting.</li><li>Multi-line pastes are sent to the shell with bracketed paste when the shell supports it (zsh and fish do), so they are edited, not run line by line. Bash 3.2, the macOS default, does not enable bracketed paste, so lines are joined with <code>;</code> when you insert history entries.</li></ul>
+<nav class="pn"><a class="prev" href="themes.html"><small>Previous</small>Themes and fonts</a><a class="next" href="data-privacy.html"><small>Next</small>Your data and privacy</a></nav>
+    <p class="edit"><a href="https://github.com/mohitkap12-a11y/Better-Terminal/edit/main/docs/site-src/shell-integration.md">Edit this page on GitHub</a></p>
+  </article>
+  <aside class="dtoc" aria-label="On this page"><div class="dt">On this page</div><a href="#supported-shells">Supported shells</a><a href="#what-the-hooks-report">What the hooks report</a><a href="#what-depends-on-it">What depends on it</a><a href="#limits">Limits</a></aside>
+</div></main>
+<footer><div class="wrap"><span>© Better Terminal · open source</span><span class="flinks"><a href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal/releases">Releases</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal/issues">Issues</a><a href="./">Docs</a><a href="../support.html">Support</a></span></div></footer>
+<script src="../script.js"></script>
+</body></html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Using the terminal | Better Terminal docs</title>
+<meta name="description" content="Press ⌘F to open the find bar at the top right of the focused pane. Typing searches the whole scrollback and selects the first match, scrolling it into view.">
+<meta property="og:title" content="Using the terminal | Better Terminal docs"><meta property="og:type" content="website">
+<meta property="og:image" content="https://mohitkap12-a11y.github.io/Better-Terminal/assets/og.png">
+<link rel="icon" href="../assets/favicon.png"><link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../styles.css">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site"><div class="wrap"><div class="bar">
+  <a class="brand" href="../index.html"><img src="../assets/icon-512.png" alt="">Better Terminal</a>
+  <nav class="links">
+    <a class="hide-sm" href="../index.html#features">Features</a><a class="hide-sm" href="./">Docs</a><a class="hide-sm" href="../support.html">Support</a><a class="hide-sm" href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a>
+    <button class="icon-btn" id="theme-toggle" aria-label="Switch light and dark theme"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+    <button class="icon-btn menu-btn" id="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu"><svg class="ico-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><svg class="ico-close" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </nav>
+  <div class="mobile-menu" id="mobile-menu" hidden><a href="../index.html#features">Features</a><a href="./">Docs</a><a href="../support.html">Support</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a><a class="btn primary" href="https://github.com/mohitkap12-a11y/Better-Terminal/releases/latest/download/BetterTerminal.dmg">Download for macOS</a></div>
+</div></div></header>
+
+<main id="main"><div class="wrap docs">
+  <aside class="dnav" aria-label="Documentation"><details class="dmob"><summary>Documentation menu</summary><div class="dg"><div class="dt">Start</div><a href="./">Documentation</a><a href="install.html">Install and update</a><a href="features.html">Features at a glance</a></div><div class="dg"><div class="dt">Organise</div><a href="workspaces-tabs.html">Workspaces and tabs</a><a href="panes-layouts.html">Panes and layouts</a><a href="templates.html">Workspace templates</a><a href="resume.html">Resume on relaunch</a></div><div class="dg"><div class="dt">Find</div><a href="history-search.html">Command history and search</a><a href="terminal.html" aria-current="page">Using the terminal</a><a href="notifications.html">Tab status and notifications</a><a href="quick-terminal.html">Quick terminal</a></div><div class="dg"><div class="dt">Look</div><a href="themes.html">Themes and fonts</a></div><div class="dg"><div class="dt">Under the hood</div><a href="shell-integration.html">Shell integration</a><a href="data-privacy.html">Your data and privacy</a></div><div class="dg"><div class="dt">Reference</div><a href="shortcuts.html">Keyboard shortcuts</a><a href="settings.html">Settings reference</a><a href="troubleshooting.html">Troubleshooting</a></div></details><div class="dside"><div class="dg"><div class="dt">Start</div><a href="./">Documentation</a><a href="install.html">Install and update</a><a href="features.html">Features at a glance</a></div><div class="dg"><div class="dt">Organise</div><a href="workspaces-tabs.html">Workspaces and tabs</a><a href="panes-layouts.html">Panes and layouts</a><a href="templates.html">Workspace templates</a><a href="resume.html">Resume on relaunch</a></div><div class="dg"><div class="dt">Find</div><a href="history-search.html">Command history and search</a><a href="terminal.html" aria-current="page">Using the terminal</a><a href="notifications.html">Tab status and notifications</a><a href="quick-terminal.html">Quick terminal</a></div><div class="dg"><div class="dt">Look</div><a href="themes.html">Themes and fonts</a></div><div class="dg"><div class="dt">Under the hood</div><a href="shell-integration.html">Shell integration</a><a href="data-privacy.html">Your data and privacy</a></div><div class="dg"><div class="dt">Reference</div><a href="shortcuts.html">Keyboard shortcuts</a><a href="settings.html">Settings reference</a><a href="troubleshooting.html">Troubleshooting</a></div></div></aside>
+  <article class="dbody">
+    <p class="crumbs"><a href="../index.html">Home</a> › <a href="./">Docs</a> › Using the terminal</p>
+<h1>Using the terminal</h1>
+<h2 id="find">Find in the terminal<a class="anchor" href="#find" aria-label="Link to this section">#</a></h2>
+<p>Press ⌘F to open the find bar at the top right of the focused pane. Typing searches the whole scrollback and selects the first match, scrolling it into view.</p>
+<div class="tbl"><table><thead><tr><th>Key</th><th>Action</th></tr></thead><tbody><tr><td>⏎ or ⌘G</td><td>Next match.</td></tr><tr><td>⇧⏎ or ⇧⌘G</td><td>Previous match.</td></tr><tr><td>esc</td><td>Close the bar and clear the highlights.</td></tr></tbody></table></div>
+<p>"No matches" appears in red when nothing is found. The search is case-insensitive. The scrollback holds the last 5,000 lines of each terminal.</p>
+<h2 id="menu">The right-click menu<a class="anchor" href="#menu" aria-label="Link to this section">#</a></h2>
+<p>Right-click inside a terminal:</p>
+<div class="tbl"><table><thead><tr><th>Item</th><th>What it does</th></tr></thead><tbody><tr><td>Copy</td><td>Copies the selection. Disabled when nothing is selected.</td></tr><tr><td>Paste</td><td>Pastes the clipboard.</td></tr><tr><td>Select All</td><td>Selects the whole terminal text.</td></tr><tr><td>Open link</td><td>Appears when there is a URL on screen or in your selection. With one URL it shows its host; with several it opens a submenu.</td></tr><tr><td>Find…</td><td>Opens the find bar in this pane.</td></tr><tr><td>Split Right / Split Down</td><td>Splits this pane.</td></tr><tr><td>Copy Last Command Output</td><td>See below.</td></tr><tr><td>Clear Screen</td><td>Sends ⌃L to the shell.</td></tr></tbody></table></div>
+<p>If you prefer the older behaviour, turn on Settings ▸ Terminal ▸ <strong>Right-click copies selected text</strong>: with text selected, right-click copies it immediately instead of showing the menu.</p>
+<h2 id="links">Links<a class="anchor" href="#links" aria-label="Link to this section">#</a></h2>
+<p>URLs in the terminal are underlined when you hover them. Click one to open it in your browser. A link you select can also be opened from the right-click menu. Only <code>http</code>, <code>https</code> and <code>file</code> links are recognised.</p>
+<h2 id="last-output">Copy last output<a class="anchor" href="#last-output" aria-label="Link to this section">#</a></h2>
+<p>⌥⌘C (or right-click ▸ Copy Last Command Output) copies what the previous command printed in the focused pane.</p>
+<p>It is taken from the terminal text added since the command started, so it works for ordinary commands. It is best-effort: if the output scrolled out of the 5,000-line scrollback, or a full-screen program such as <code>vim</code> redrew the screen, the result can be incomplete or empty.</p>
+<h2 id="broadcast">Broadcast input<a class="anchor" href="#broadcast" aria-label="Link to this section">#</a></h2>
+<p>Broadcast repeats what you type in the focused pane in every other pane of the same workspace. It is for jobs like running the same command on several servers.</p>
+<ul><li>Turn it on with ⌥⌘I (Pane menu or command palette). An orange <strong>Broadcast</strong> button appears in the tab bar; click it, or press ⌥⌘I again, to stop.</li><li>It is a per-workspace switch and other workspaces are not affected.</li><li>Typed text, return, tab, delete, escape, arrow keys, home and end, and ⌃-letter combinations are repeated, and so are pastes. Shortcuts that use ⌘ are never repeated.</li><li>Only the focused pane is the source. Click the pane you want to type in.</li><li>Be careful: every pane receives every key, including ones that run commands.</li></ul>
+<h2 id="selection-and-clipboard">Selection and clipboard<a class="anchor" href="#selection-and-clipboard" aria-label="Link to this section">#</a></h2>
+<p>Click and drag to select, double-click to select a word. Standard ⌘C and ⌘V work.</p>
+<h2 id="text-size">Text size<a class="anchor" href="#text-size" aria-label="Link to this section">#</a></h2>
+<p>⌘+ and ⌘− change the text size in every pane (9 to 32 pt). Settings ▸ Terminal ▸ Font size has the same control.</p>
+<nav class="pn"><a class="prev" href="history-search.html"><small>Previous</small>Command history and search</a><a class="next" href="notifications.html"><small>Next</small>Tab status and notifications</a></nav>
+    <p class="edit"><a href="https://github.com/mohitkap12-a11y/Better-Terminal/edit/main/docs/site-src/terminal.md">Edit this page on GitHub</a></p>
+  </article>
+  <aside class="dtoc" aria-label="On this page"><div class="dt">On this page</div><a href="#find">Find in the terminal</a><a href="#menu">The right-click menu</a><a href="#links">Links</a><a href="#last-output">Copy last output</a><a href="#broadcast">Broadcast input</a><a href="#selection-and-clipboard">Selection and clipboard</a><a href="#text-size">Text size</a></aside>
+</div></main>
+<footer><div class="wrap"><span>© Better Terminal · open source</span><span class="flinks"><a href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal/releases">Releases</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal/issues">Issues</a><a href="./">Docs</a><a href="../support.html">Support</a></span></div></footer>
+<script src="../script.js"></script>
+</body></html>

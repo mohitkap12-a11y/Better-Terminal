@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Command history and search | Better Terminal docs</title>
+<meta name="description" content="For zsh, bash and fish, Better Terminal records every command you run, per tab:">
+<meta property="og:title" content="Command history and search | Better Terminal docs"><meta property="og:type" content="website">
+<meta property="og:image" content="https://mohitkap12-a11y.github.io/Better-Terminal/assets/og.png">
+<link rel="icon" href="../assets/favicon.png"><link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../styles.css">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site"><div class="wrap"><div class="bar">
+  <a class="brand" href="../index.html"><img src="../assets/icon-512.png" alt="">Better Terminal</a>
+  <nav class="links">
+    <a class="hide-sm" href="../index.html#features">Features</a><a class="hide-sm" href="./">Docs</a><a class="hide-sm" href="../support.html">Support</a><a class="hide-sm" href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a>
+    <button class="icon-btn" id="theme-toggle" aria-label="Switch light and dark theme"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+    <button class="icon-btn menu-btn" id="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu"><svg class="ico-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><svg class="ico-close" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </nav>
+  <div class="mobile-menu" id="mobile-menu" hidden><a href="../index.html#features">Features</a><a href="./">Docs</a><a href="../support.html">Support</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a><a class="btn primary" href="https://github.com/mohitkap12-a11y/Better-Terminal/releases/latest/download/BetterTerminal.dmg">Download for macOS</a></div>
+</div></div></header>
+
+<main id="main"><div class="wrap docs">
+  <aside class="dnav" aria-label="Documentation"><details class="dmob"><summary>Documentation menu</summary><div class="dg"><div class="dt">Start</div><a href="./">Documentation</a><a href="install.html">Install and update</a><a href="features.html">Features at a glance</a></div><div class="dg"><div class="dt">Organise</div><a href="workspaces-tabs.html">Workspaces and tabs</a><a href="panes-layouts.html">Panes and layouts</a><a href="templates.html">Workspace templates</a><a href="resume.html">Resume on relaunch</a></div><div class="dg"><div class="dt">Find</div><a href="history-search.html" aria-current="page">Command history and search</a><a href="terminal.html">Using the terminal</a><a href="notifications.html">Tab status and notifications</a><a href="quick-terminal.html">Quick terminal</a></div><div class="dg"><div class="dt">Look</div><a href="themes.html">Themes and fonts</a></div><div class="dg"><div class="dt">Under the hood</div><a href="shell-integration.html">Shell integration</a><a href="data-privacy.html">Your data and privacy</a></div><div class="dg"><div class="dt">Reference</div><a href="shortcuts.html">Keyboard shortcuts</a><a href="settings.html">Settings reference</a><a href="troubleshooting.html">Troubleshooting</a></div></details><div class="dside"><div class="dg"><div class="dt">Start</div><a href="./">Documentation</a><a href="install.html">Install and update</a><a href="features.html">Features at a glance</a></div><div class="dg"><div class="dt">Organise</div><a href="workspaces-tabs.html">Workspaces and tabs</a><a href="panes-layouts.html">Panes and layouts</a><a href="templates.html">Workspace templates</a><a href="resume.html">Resume on relaunch</a></div><div class="dg"><div class="dt">Find</div><a href="history-search.html" aria-current="page">Command history and search</a><a href="terminal.html">Using the terminal</a><a href="notifications.html">Tab status and notifications</a><a href="quick-terminal.html">Quick terminal</a></div><div class="dg"><div class="dt">Look</div><a href="themes.html">Themes and fonts</a></div><div class="dg"><div class="dt">Under the hood</div><a href="shell-integration.html">Shell integration</a><a href="data-privacy.html">Your data and privacy</a></div><div class="dg"><div class="dt">Reference</div><a href="shortcuts.html">Keyboard shortcuts</a><a href="settings.html">Settings reference</a><a href="troubleshooting.html">Troubleshooting</a></div></div></aside>
+  <article class="dbody">
+    <p class="crumbs"><a href="../index.html">Home</a> › <a href="./">Docs</a> › Command history and search</p>
+<h1>Command history and search</h1>
+<h2 id="what-is-recorded">What is recorded<a class="anchor" href="#what-is-recorded" aria-label="Link to this section">#</a></h2>
+<p>For zsh, bash and fish, Better Terminal records every command you run, per tab:</p>
+<ul><li>the command text,</li><li>the folder it ran in,</li><li>the exit status (success or failed),</li><li>the start time and how long it took.</li></ul>
+<p>Only <strong>commands</strong> are stored, never their output. History is kept in <code>~/Library/Application Support/BetterTerminal/history/</code>, one file per tab, and survives quitting and rebooting. See <a href="shell-integration.html">Shell integration</a> for how it is captured.</p>
+<h2 id="history-of-the-current-tab">History of the current tab<a class="anchor" href="#history-of-the-current-tab" aria-label="Link to this section">#</a></h2>
+<p>Click the clock button on a pane, or press ⇧⌘H.</p>
+<div class="tbl"><table><thead><tr><th>Key</th><th>Action</th></tr></thead><tbody><tr><td>Type</td><td>Search the tab's history.</td></tr><tr><td>↑ ↓, Page Up/Down</td><td>Move through results while the search field keeps focus.</td></tr><tr><td>⏎</td><td>Put the command at the prompt, without running it.</td></tr><tr><td>⌘⏎</td><td>Run it.</td></tr><tr><td>Click</td><td>Put it at the prompt.</td></tr><tr><td>Double-click</td><td>Run it.</td></tr></tbody></table></div>
+<p>The red-circle toggle shows only commands that failed. Right-click a command for <strong>Run again</strong>, <strong>Insert at prompt</strong>, <strong>Copy command</strong> or <strong>Copy directory</strong>.</p>
+<p>Inserting replaces what is currently typed at the prompt. Multi-line commands are inserted safely: they are pasted as one block and never run until you press return.</p>
+<h2 id="palette">The command palette<a class="anchor" href="#palette" aria-label="Link to this section">#</a></h2>
+<p>Press ⌘K. The palette has two tabs, shown under the search field:</p>
+<h3 id="actions">Actions<a class="anchor" href="#actions" aria-label="Link to this section">#</a></h3>
+<p>Open by default. With nothing typed, the top of the list shows your <strong>three most recent commands</strong> from all terminals, followed by the actions: new tab and workspace, split, find, broadcast, copy last output, quick terminal, templates, workspaces, layouts, themes and appearance. Type to filter the actions.</p>
+<h3 id="commands">Commands<a class="anchor" href="#commands" aria-label="Link to this section">#</a></h3>
+<p>Press <strong>→</strong> (or click the tab) to switch. It lists the <strong>last 30 commands from every terminal in every workspace</strong>, each with its workspace and tab. Type to search all history, not just recent items. Press <strong>←</strong> to go back.</p>
+<div class="tbl"><table><thead><tr><th>Key</th><th>Action</th></tr></thead><tbody><tr><td>↑ ↓</td><td>Move. Going up from the first item wraps to the last, and down from the last wraps to the first.</td></tr><tr><td>⏎</td><td>Open that command's tab and put the command at its prompt.</td></tr><tr><td>⌘⏎</td><td>Open the tab and run the command.</td></tr><tr><td>→ / ←</td><td>Switch between Commands and Actions.</td></tr><tr><td>esc</td><td>Close.</td></tr></tbody></table></div>
+<h2 id="tips">Tips<a class="anchor" href="#tips" aria-label="Link to this section">#</a></h2>
+<ul><li>Ran something in another workspace and can't remember where? Search for it on the Commands tab and press ⏎: you land in the right tab.</li><li>History is separate per tab on purpose, so a build tab and a database tab do not mix. The Commands tab is where you look across tabs.</li><li>Closing a tab deletes its history, and deleting a workspace deletes the history of its tabs.</li></ul>
+<nav class="pn"><a class="prev" href="resume.html"><small>Previous</small>Resume on relaunch</a><a class="next" href="terminal.html"><small>Next</small>Using the terminal</a></nav>
+    <p class="edit"><a href="https://github.com/mohitkap12-a11y/Better-Terminal/edit/main/docs/site-src/history-search.md">Edit this page on GitHub</a></p>
+  </article>
+  <aside class="dtoc" aria-label="On this page"><div class="dt">On this page</div><a href="#what-is-recorded">What is recorded</a><a href="#history-of-the-current-tab">History of the current tab</a><a href="#palette">The command palette</a><a href="#tips">Tips</a></aside>
+</div></main>
+<footer><div class="wrap"><span>© Better Terminal · open source</span><span class="flinks"><a href="https://github.com/mohitkap12-a11y/Better-Terminal">GitHub</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal/releases">Releases</a><a href="https://github.com/mohitkap12-a11y/Better-Terminal/issues">Issues</a><a href="./">Docs</a><a href="../support.html">Support</a></span></div></footer>
+<script src="../script.js"></script>
+</body></html>
