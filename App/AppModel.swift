@@ -566,11 +566,12 @@ final class AppModel {
     // MARK: Quick terminal and smoke test
 
     /// A throwaway terminal that is not part of any workspace (the drop-down terminal).
-    func makeEphemeralSession(name: String, cwd: String? = nil, onExit: @escaping () -> Void) -> TerminalSession {
+    func makeEphemeralSession(name: String, cwd: String? = nil, onCwd: @escaping (String) -> Void = { _ in },
+                              onExit: @escaping () -> Void) -> TerminalSession {
         let tab = TerminalTab(title: name, cwd: cwd ?? NSHomeDirectory())
         return SwiftTermSession(tab: tab, integrationDir: integrationDir,
                                 eventFile: eventsDir.appendingPathComponent("\(name.replacingOccurrences(of: " ", with: "-")).log"),
-                                callbacks: .init(onCommand: { _ in }, onCwd: { _ in }, onTitle: { _ in },
+                                callbacks: .init(onCommand: { _ in }, onCwd: { onCwd($0) }, onTitle: { _ in },
                                                  onExit: { _ in onExit() }, onFocus: {}))
     }
 

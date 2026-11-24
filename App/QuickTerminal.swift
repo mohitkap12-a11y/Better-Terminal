@@ -45,7 +45,8 @@ final class QuickTerminal {
     private var hotKey: EventHotKeyRef?
     private var handler: EventHandlerRef?
     private var escMonitor: Any?
-    private var lastFolder: String?
+    /// Where the quick terminal's shell actually is (it reports every folder change), not just where we last sent it.
+    private var shellFolder: String?
 
     /// Lets the quick terminal open on demand (palette, "Show now") even when its hotkey is off.
     func attach(model: AppModel) { self.model = model }
@@ -92,7 +93,7 @@ final class QuickTerminal {
         hotKey = nil; handler = nil
         if let m = escMonitor { NSEvent.removeMonitor(m); escMonitor = nil }
         panel?.orderOut(nil); panel = nil
-        session?.terminate(); session = nil; lastFolder = nil
+        session?.terminate(); session = nil; shellFolder = nil
     }
 
     func toggle() {
@@ -134,6 +135,10 @@ final class QuickTerminal {
         return result.count > 1 && result.hasSuffix("/") ? String(result.dropLast()) : result
     }
 
+    private func normalized(_ path: String) -> String {
+        path.count > 1 && path.hasSuffix("/") ? String(path.dropLast()) : path
+    }
+
     private func quoted(_ path: String) -> String { "'" + path.replacingOccurrences(of: "'", with: "'\\''") + "'" }
 
     // MARK: Show
@@ -142,14 +147,16 @@ final class QuickTerminal {
         guard let model else { return }
         let folder = launchFolder()          // ask before this app takes focus
         if session == nil {
-            session = model.makeEphemeralSession(name: "Quick Terminal", cwd: folder) { [weak self] in
+            session = model.makeEphemeralSession(name: "Quick Terminal", cwd: folder, onCwd: { [weak self] in
+                self?.shellFolder = self?.normalized($0)
+            }, onExit: { [weak self] in
                 // Shell exited: close the panel; the next toggle starts a fresh shell.
-                self?.panel?.orderOut(nil); self?.panel = nil; self?.session = nil; self?.lastFolder = nil
-            }
-            lastFolder = folder
-        } else if let folder, folder != lastFolder, session?.hasRunningCommand == false {
+                self?.panel?.orderOut(nil); self?.panel = nil; self?.session = nil; self?.shellFolder = nil
+            })
+            shellFolder = folder.map(normalized)
+        } else if let folder, normalized(folder) != shellFolder, session?.hasRunningCommand == false {
+            // The shell is somewhere else (you cd'd away, or came from another folder): follow the requested one.
             session?.run("cd " + quoted(folder))
-            lastFolder = folder
         }
         guard let session else { return }
         session.apply(theme: model.theme, scheme: NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .dark : .light,
