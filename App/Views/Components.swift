@@ -1,4 +1,5 @@
 import SwiftUI
+import BetterTerminalCore
 
 /// Page title + one line about the page.
 struct PageHeader: View {
@@ -131,4 +132,32 @@ struct PillButton: View {
         .buttonStyle(.plain)
         .disabled(disabled)
     }
+}
+
+/// Right-click menu for a tab: rename, move to another workspace, close.
+struct TabContextMenu: ViewModifier {
+    @Environment(AppModel.self) private var model
+    let tab: TerminalTab
+
+    func body(content: Content) -> some View {
+        content.contextMenu {
+            Button("Rename…") { model.beginRenameTab(tab) }
+            Menu("Move to Workspace") {
+                ForEach(model.state.workspaces) { ws in
+                    if !ws.tabs.contains(where: { $0.id == tab.id }) {
+                        Button(ws.name) { model.moveTab(tab.id, toWorkspace: ws.id) }
+                    }
+                }
+                Divider()
+                Button("New Workspace") { model.moveTabToNewWorkspace(tab.id) }
+            }
+            Divider()
+            Button("Close Tab", role: .destructive) { model.closeTab(tab.id) }
+                .disabled((model.active?.tabs.count ?? 0) < 2)
+        }
+    }
+}
+
+extension View {
+    func tabContextMenu(_ tab: TerminalTab) -> some View { modifier(TabContextMenu(tab: tab)) }
 }

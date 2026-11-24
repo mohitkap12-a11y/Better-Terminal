@@ -28,6 +28,7 @@
 ## Features
 
 - **Workspaces.** One per project, each with its own tabs, layout and folders. Switch from the sidebar or with `⌃⌘1–9`.
+- **Drag to organise.** Reorder workspaces and tabs by dragging, drop a tab on a workspace to move it, right-click a tab to rename it or move it to another workspace.
 - **Pane layouts.** Tabs fill a grid: 1×2, 2×1, 2×2 or any custom rows × columns. New tabs follow the layout.
 - **History for every tab.** Click the clock (or `⇧⌘H`), type to search, `↑↓` to move, `⏎` to insert, `⌘⏎` to run. Right-click a command to copy it or run it again.
 - **Move between panes.** `⌘` + arrow keys jump to the neighbouring terminal; the pane you land on pulses.

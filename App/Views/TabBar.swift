@@ -47,6 +47,7 @@ private struct TabChip: View {
     let selected: Bool
     let canClose: Bool
     @State private var hovering = false
+    @State private var dropTarget = false
 
     var body: some View {
         HStack(spacing: Metrics.s1) {
@@ -66,7 +67,16 @@ private struct TabChip: View {
         .background(selected ? theme.selection : Color.clear,
                     in: RoundedRectangle(cornerRadius: Metrics.radiusControl))
         .contentShape(Rectangle())
+        .overlay(alignment: .leading) {
+            if dropTarget { Capsule().fill(theme.accent).frame(width: 3, height: 20).offset(x: -3) }   // drop here
+        }
+        .onTapGesture(count: 2) { model.beginRenameTab(tab) }
         .onTapGesture { model.mutateActive { $0.activeTabID = tab.id } }
         .onHover { hovering = $0 }
+        .draggable(AppModel.tabPayload(tab.id))
+        .dropDestination(for: String.self) { items, _ in
+            model.handleDrop(items, ontoTab: tab.id)
+        } isTargeted: { dropTarget = $0 }
+        .tabContextMenu(tab)
     }
 }

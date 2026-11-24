@@ -263,3 +263,81 @@ final class ClearSnapshotTests: XCTestCase {
         XCTAssertEqual(TerminalText.afterClear("new stuff", baseline: "old stuff"), "new stuff")
     }
 }
+
+final class ReorderTests: XCTestCase {
+    private func state() -> (AppState, [UUID], [UUID]) {
+        var a = Workspace(name: "A"); var b = Workspace(name: "B"); var c = Workspace(name: "C")
+        a.addTab(); a.addTab(); b.addTab(); c.addTab()
+        let st = AppState(workspaces: [a, b, c])
+        return (st, st.workspaces.map(\.id), st.workspaces.flatMap { $0.tabs.map(\.id) })
+    }
+
+    func testMoveWorkspace() {
+        var (s, w, _) = state()
+        XCTAssertTrue(s.moveWorkspace(w[2], before: w[0]))
+        XCTAssertEqual(s.workspaces.map(\.name), ["C", "A", "B"])
+        XCTAssertTrue(s.moveWorkspace(w[2], before: nil))
+        XCTAssertEqual(s.workspaces.map(\.name), ["A", "B", "C"])
+        XCTAssertFalse(s.moveWorkspace(w[0], before: w[0]))
+        XCTAssertFalse(s.moveWorkspace(w[0], before: UUID()))
+        XCTAssertEqual(s.workspaces.map(\.name), ["A", "B", "C"])
+    }
+
+    func testReorderTabsWithinWorkspace() {
+        var (s, w, t) = state()                      // A has t[0], t[1]
+        XCTAssertTrue(s.moveTab(t[1], toWorkspace: w[0], before: t[0]))
+        XCTAssertEqual(s.workspaces[0].tabs.map(\.id), [t[1], t[0]])
+        XCTAssertEqual(s.workspaces[0].activeTabID, t[1])
+    }
+
+    func testMoveTabAcrossWorkspaces() {
+        var (s, w, t) = state()
+        XCTAssertTrue(s.moveTab(t[0], toWorkspace: w[1]))
+        XCTAssertEqual(s.workspaces[0].tabs.map(\.id), [t[1]])
+        XCTAssertEqual(s.workspaces[1].tabs.map(\.id), [t[2], t[0]])
+        XCTAssertEqual(s.workspaces[1].activeTabID, t[0])
+        XCTAssertEqual(s.workspaces[0].activeTabID, t[1])    // source picks a neighbour
+    }
+
+    func testMovingLastTabLeavesAFreshOne() {
+        var (s, w, t) = state()
+        XCTAssertTrue(s.moveTab(t[2], toWorkspace: w[0]))      // B's only tab
+        XCTAssertEqual(s.workspaces[1].tabs.count, 1)
+        XCTAssertNotEqual(s.workspaces[1].tabs[0].id, t[2])
+        XCTAssertEqual(s.workspaces[1].activeTabID, s.workspaces[1].tabs[0].id)
+        XCTAssertEqual(s.workspaces[0].tabs.count, 3)
+    }
+
+    func testReorderOnlyTabIsNoOp() {
+        var (s, w, t) = state()
+        XCTAssertTrue(s.moveTab(t[2], toWorkspace: w[1]))      // B's only tab, same workspace
+        XCTAssertEqual(s.workspaces[1].tabs.map(\.id), [t[2]])
+    }
+
+    func testMoveRejectsBadInput() {
+        var (s, w, t) = state()
+        XCTAssertFalse(s.moveTab(UUID(), toWorkspace: w[0]))
+        XCTAssertFalse(s.moveTab(t[0], toWorkspace: UUID()))
+        XCTAssertFalse(s.moveTab(t[0], toWorkspace: w[1], before: UUID()))
+        XCTAssertFalse(s.moveTab(t[0], toWorkspace: w[0], before: t[0]))
+    }
+
+    func testRenameTab() throws {
+        var (s, _, t) = state()
+        XCTAssertTrue(s.renameTab(t[0], to: "  server  "))
+        XCTAssertEqual(s.workspaces[0].tabs[0].title, "server")
+        XCTAssertTrue(s.workspaces[0].tabs[0].hasCustomTitle)
+        s.workspaces[0].tabs[0].shellTitle = "vim notes.md"     // the shell kept reporting its title
+        XCTAssertTrue(s.renameTab(t[0], to: "   "))          // empty: back to shell titles
+        XCTAssertFalse(s.workspaces[0].tabs[0].hasCustomTitle)
+        XCTAssertEqual(s.workspaces[0].tabs[0].title, "vim notes.md")
+        XCTAssertFalse(s.renameTab(UUID(), to: "x"))
+    }
+
+    func testOldTabsWithoutCustomTitleStillDecode() throws {
+        let json = #"{"id":"11111111-1111-1111-1111-111111111111","title":"T","cwd":"/","shell":"/bin/zsh"}"#
+        let tab = try JSONDecoder().decode(TerminalTab.self, from: Data(json.utf8))
+        XCTAssertFalse(tab.hasCustomTitle)
+        XCTAssertEqual(tab.shellTitle, "T")
+    }
+}

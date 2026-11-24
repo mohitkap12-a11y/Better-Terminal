@@ -18,6 +18,8 @@ struct Sidebar: View {
     @State private var renaming: Workspace?
     @State private var newName = ""
     @State private var deleting: Workspace?
+    @State private var targetedWorkspace: UUID?
+    @State private var targetedNew = false
 
     private let colors = ["#0A84FF", "#30B26B", "#FF7A45", "#8E6CF0", "#FF375F", "#64D2FF"]
 
@@ -44,6 +46,15 @@ struct Sidebar: View {
                         } trailing: {
                             shortcut("⌃⌘\(index + 1)")
                         }
+                        .overlay {
+                            if targetedWorkspace == ws.id {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(theme.accent, lineWidth: 1.5)
+                            }
+                        }
+                        .draggable(AppModel.workspacePayload(ws.id))
+                        .dropDestination(for: String.self) { items, _ in
+                            model.handleDrop(items, ontoWorkspace: ws.id)
+                        } isTargeted: { targetedWorkspace = $0 ? ws.id : (targetedWorkspace == ws.id ? nil : targetedWorkspace) }
                         .contextMenu {
                             Button("Rename…") { newName = ws.name; renaming = ws }
                             Menu("Color") {
@@ -55,11 +66,25 @@ struct Sidebar: View {
                             Button("Delete…", role: .destructive) { deleting = ws }
                                 .disabled(model.state.workspaces.count < 2)
                         }
+                        // The open workspace lists its tabs: click to switch, drag to reorder or onto another workspace.
+                        if ws.id == model.state.activeWorkspaceID && !collapsed {
+                            ForEach(ws.tabs) { tab in
+                                SidebarTabRow(tab: tab, selected: model.route == .terminal && tab.id == ws.activeTabID)
+                            }
+                        }
                     }
                     SidebarRow(title: "New Workspace", isSelected: false, collapsed: collapsed,
                                action: { model.addWorkspace() }) {
                         icon("plus", selected: false)
                     } trailing: { shortcut("⇧⌘N") }
+                    .overlay {
+                        if targetedNew {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(theme.accent, lineWidth: 1.5)
+                        }
+                    }
+                    .dropDestination(for: String.self) { items, _ in
+                        model.handleDropOnNewWorkspace(items)
+                    } isTargeted: { targetedNew = $0 }
                 }
                 .padding(.horizontal, 10)
             }
@@ -213,5 +238,46 @@ struct SidebarRow<Icon: View, Trailing: View>: View {
         .help(collapsed ? title : "")
         .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+/// A tab listed under its workspace in the sidebar.
+private struct SidebarTabRow: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.theme) private var theme
+    let tab: TerminalTab
+    let selected: Bool
+    @State private var hovering = false
+    @State private var dropTarget = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "terminal").font(.system(size: 10.5)).foregroundStyle(selected ? theme.accent : theme.faint)
+            Text(tab.title).font(.system(size: 12, weight: selected ? .medium : .regular))
+                .foregroundStyle(selected ? Color.primary : theme.muted).lineLimit(1)
+            Spacer(minLength: 0)
+        }
+        .padding(.leading, 40).padding(.trailing, 10)
+        .frame(height: 26)
+        .background(selected ? theme.hover : (hovering ? theme.hover.opacity(0.5) : Color.clear),
+                    in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+        .overlay(alignment: .top) {
+            if dropTarget { Capsule().fill(theme.accent).frame(height: 2).padding(.leading, 36).offset(y: -1) }
+        }
+        .contentShape(Rectangle())
+        .onHover { hovering = $0 }
+        .onTapGesture(count: 2) { model.beginRenameTab(tab) }
+        .onTapGesture {
+            model.route = .terminal
+            model.mutateActive { $0.activeTabID = tab.id }
+            model.session(for: tab).focus()
+        }
+        .draggable(AppModel.tabPayload(tab.id))
+        .dropDestination(for: String.self) { items, _ in
+            model.handleDrop(items, ontoTab: tab.id)
+        } isTargeted: { dropTarget = $0 }
+        .tabContextMenu(tab)
+        .accessibilityLabel(tab.title)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

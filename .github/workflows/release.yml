@@ -176,9 +176,18 @@ jobs:
           shasum -a 256 "BetterTerminal-${VERSION}.dmg" BetterTerminal.dmg > SHA256SUMS
           cat SHA256SUMS
 
+      - name: Prepare the release description
+        # The GitHub release shows the same notes as the update window (docs/release-notes/<tag>.md, or for a
+        # -beta.N / dry-run tag the file of the version it leads to), followed by GitHub's generated change list.
+        run: |
+          NOTES_FILE="docs/release-notes/${GITHUB_REF_NAME}.md"
+          [ -f "$NOTES_FILE" ] || NOTES_FILE="docs/release-notes/v${VERSION%%-*}.md"
+          if [ -s "$NOTES_FILE" ]; then cp "$NOTES_FILE" dist/release-body.md; else : > dist/release-body.md; fi
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          body_path: dist/release-body.md
           files: |
             dist/BetterTerminal-${{ env.VERSION }}.dmg
             dist/BetterTerminal.dmg

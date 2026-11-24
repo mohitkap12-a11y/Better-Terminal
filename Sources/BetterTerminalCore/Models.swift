@@ -23,10 +23,26 @@ public struct TerminalTab: Codable, Hashable, Sendable, Identifiable {
     public var title: String
     public var cwd: String
     public var shell: String
+    /// True once the user renamed the tab: the shell's own title updates no longer overwrite `title`.
+    public var hasCustomTitle: Bool
+    /// The latest title the shell set, kept while a custom name is shown so clearing the name can restore it.
+    public var shellTitle: String
 
     public init(id: UUID = UUID(), title: String = "Terminal",
-                cwd: String = NSHomeDirectory(), shell: String = "/bin/zsh") {
-        self.id = id; self.title = title; self.cwd = cwd; self.shell = shell
+                cwd: String = NSHomeDirectory(), shell: String = "/bin/zsh", hasCustomTitle: Bool = false) {
+        self.id = id; self.title = title; self.cwd = cwd; self.shell = shell; self.hasCustomTitle = hasCustomTitle
+        self.shellTitle = title
+    }
+
+    // Tolerant decoding: state files written before renaming existed have no `hasCustomTitle`.
+    public init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        title = try c.decode(String.self, forKey: .title)
+        cwd = try c.decode(String.self, forKey: .cwd)
+        shell = try c.decode(String.self, forKey: .shell)
+        hasCustomTitle = try c.decodeIfPresent(Bool.self, forKey: .hasCustomTitle) ?? false
+        shellTitle = try c.decodeIfPresent(String.self, forKey: .shellTitle) ?? title
     }
 }
 
@@ -95,5 +111,72 @@ public struct AppState: Codable, Sendable {
         var ws = Workspace(name: "Main")
         ws.addTab()
         return AppState(workspaces: [ws])
+    }
+}
+
+// MARK: Reordering and moving
+
+extension AppState {
+    /// Moves a workspace in front of `target`, or to the end when `target` is nil.
+    @discardableResult
+    public mutating func moveWorkspace(_ id: UUID, before target: UUID?) -> Bool {
+        guard id != target, let from = workspaces.firstIndex(where: { $0.id == id }) else { return false }
+        let ws = workspaces.remove(at: from)
+        if let target, let to = workspaces.firstIndex(where: { $0.id == target }) {
+            workspaces.insert(ws, at: to)
+        } else if target == nil {
+            workspaces.append(ws)
+        } else {
+            workspaces.insert(ws, at: from)      // unknown target: put it back
+            return false
+        }
+        return true
+    }
+
+    /// Moves a tab to `workspaceID`, in front of `targetTab` (or to the end). Works within one workspace
+    /// (reorder) and across workspaces. The tab keeps its id, so its terminal, history and saved text follow it.
+    /// A workspace never ends up without a tab: if its last tab leaves, a fresh one takes its place.
+    @discardableResult
+    public mutating func moveTab(_ tabID: UUID, toWorkspace workspaceID: UUID, before targetTab: UUID? = nil) -> Bool {
+        guard tabID != targetTab,
+              let srcW = workspaces.firstIndex(where: { $0.tabs.contains { $0.id == tabID } }),
+              let dstW = workspaces.firstIndex(where: { $0.id == workspaceID }),
+              let srcT = workspaces[srcW].tabs.firstIndex(where: { $0.id == tabID }) else { return false }
+        if let targetTab, !workspaces[dstW].tabs.contains(where: { $0.id == targetTab }) { return false }
+
+        let tab = workspaces[srcW].tabs.remove(at: srcT)
+        if workspaces[srcW].activeTabID == tabID {
+            let tabs = workspaces[srcW].tabs
+            workspaces[srcW].activeTabID = tabs.indices.contains(srcT) ? tabs[srcT].id : tabs.last?.id
+        }
+        if workspaces[srcW].tabs.isEmpty && srcW != dstW {
+            workspaces[srcW].addTab(cwd: tab.cwd)
+        }
+        if let targetTab, let i = workspaces[dstW].tabs.firstIndex(where: { $0.id == targetTab }) {
+            workspaces[dstW].tabs.insert(tab, at: i)
+        } else {
+            workspaces[dstW].tabs.append(tab)
+        }
+        workspaces[dstW].activeTabID = tab.id
+        return true
+    }
+
+    /// Gives a tab a name of the user's choosing. An empty name goes back to the shell-provided title.
+    @discardableResult
+    public mutating func renameTab(_ tabID: UUID, to name: String) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        for w in workspaces.indices {
+            if let t = workspaces[w].tabs.firstIndex(where: { $0.id == tabID }) {
+                if trimmed.isEmpty {
+                    workspaces[w].tabs[t].hasCustomTitle = false
+                    workspaces[w].tabs[t].title = workspaces[w].tabs[t].shellTitle
+                } else {
+                    workspaces[w].tabs[t].title = String(trimmed.prefix(60))
+                    workspaces[w].tabs[t].hasCustomTitle = true
+                }
+                return true
+            }
+        }
+        return false
     }
 }
