@@ -3,8 +3,14 @@
 All notable changes. Release notes shown in the update window live in `docs/release-notes/`.
 
 ## [Unreleased]
+### Fixed
+- Right-clicking a terminal now selects that pane first (active pane and keyboard), so Paste and ⌘V go to the pane you right-clicked and not the one you were in before.
+
+### Added
+- The collapsed sidebar opens while the pointer is over it (so you can switch workspace or tab) and closes when it leaves. It floats over the terminals, so they do not resize.
+
 ### Changed
-- Sidebar redesign: a soft accent wash, glowing icon and sliding indicator on the selected row; an input-style Search field with the ⌘K key cap; workspace rows show a count pill while tabs run and a dot when a command failed; a footer with the version and what is running; a collapse button that glows on hover; the whole sidebar and its labels animate with one easing. Search, Shortcuts and Settings stay at the bottom. Every option is unchanged.
+- Sidebar redesign: a soft accent wash, glowing icon and sliding indicator on the selected row; workspace rows show a count pill while tabs run and a dot when a command failed; a footer with the version and what is running; a collapse button that glows on hover; the whole sidebar and its labels animate with one easing. Search, Shortcuts and Settings stay at the bottom. Every option is unchanged.
 - README and website screenshots show the new sidebar.
 
 ### Fixed
