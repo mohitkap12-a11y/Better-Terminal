@@ -159,8 +159,7 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
 
         // LocalProcessTerminalView's responder methods are not `open`, so detect focus via clicks.
         clickMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
-            if let v = self?.view, let w = v.window, event.window === w,
-               v.bounds.contains(v.convert(event.locationInWindow, from: nil)) {
+            if let self, self.isClickTarget(event) {
                 Task { @MainActor in callbacks.onFocus() }
             }
             return event
@@ -169,8 +168,7 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
         // Right-click: a context menu (copy, paste, select all, open link, find, split, clear),
         // or copy straight away when the setting says so and text is selected.
         rightClickMonitor = NSEvent.addLocalMonitorForEvents(matching: .rightMouseDown) { [weak self] event in
-            guard let self, let w = self.view.window, event.window === w,
-                  self.view.bounds.contains(self.view.convert(event.locationInWindow, from: nil)) else { return event }
+            guard let self, let w = self.view.window, self.isClickTarget(event) else { return event }
             // Right-clicking a pane selects it, like a left click: it becomes the active pane and takes the keyboard,
             // so Paste (or ⌘V afterwards) goes here and not to the pane you were in before.
             Task { @MainActor in callbacks.onFocus() }
@@ -284,6 +282,15 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
         view.mirroring = true
         view.paste(self)
         view.mirroring = false
+    }
+
+    /// True when the click really lands on this terminal. Being inside its bounds is not enough: the sidebar can float
+    /// over a pane (hover to open), and those clicks belong to the sidebar.
+    private func isClickTarget(_ event: NSEvent) -> Bool {
+        guard let w = view.window, event.window === w,
+              let root = w.contentView?.superview,
+              let hit = root.hitTest(event.locationInWindow) else { return false }
+        return hit === view || hit.isDescendant(of: view)
     }
 
     // MARK: Right-click menu
