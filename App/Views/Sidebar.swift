@@ -11,11 +11,21 @@ enum SidebarState {
     static let selection = Animation.timingCurve(0.4, 0, 0.2, 1, duration: 0.28)
 }
 
+private struct SidebarSnapshotKey: EnvironmentKey { static let defaultValue = false }
+extension EnvironmentValues {
+    /// True while the sidebar is rendered to an image in CI: no scroll view and no window-drag strip, which cannot be drawn offscreen.
+    var sidebarSnapshot: Bool {
+        get { self[SidebarSnapshotKey.self] }
+        set { self[SidebarSnapshotKey.self] = newValue }
+    }
+}
+
 /// Full-width sidebar (or an icon rail) with the workspaces, search and settings.
 /// Leaves room at the top for the window's traffic-light buttons.
 struct Sidebar: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
+    @Environment(\.sidebarSnapshot) private var snapshot
     @Binding var collapsed: Bool
 
     @State private var renaming: Workspace?
@@ -55,21 +65,10 @@ struct Sidebar: View {
             .padding(.horizontal, 10)
             .padding(.bottom, 4)
 
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 3) {
-                    if collapsed {
-                        // The rail has no headings: a thin divider stands in for "WORKSPACES".
-                        Rectangle().fill(theme.hairline).frame(height: 1).padding(.horizontal, 14).padding(.vertical, 6)
-                        workspaceRows
-                    } else {
-                        // The whole list can be folded away, and each workspace folds its own tabs (remembered).
-                        SectionHeader(title: "WORKSPACES", folded: sectionFolded, count: model.state.workspaces.count) {
-                            withAnimation(.easeOut(duration: 0.15)) { sectionFolded.toggle() }
-                        }
-                        if !sectionFolded { workspaceRows }
-                    }
-                }
-                .padding(.horizontal, 10)
+            if snapshot {
+                workspaceList
+            } else {
+                ScrollView(showsIndicators: false) { workspaceList }
             }
 
             Spacer(minLength: 0)
@@ -88,7 +87,7 @@ struct Sidebar: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .background(theme.sidebar)
         // Title-bar strip that drags the window (the traffic lights sit on top of it).
-        .overlay(alignment: .top) { WindowDragArea().frame(height: 40) }
+        .overlay(alignment: .top) { if !snapshot { WindowDragArea().frame(height: 40) } }
         .clipped()
         .overlay(alignment: .trailing) { Rectangle().fill(theme.border).frame(width: 1) }
         .overlay(alignment: .topTrailing) {
@@ -107,6 +106,24 @@ struct Sidebar: View {
                 deleting = nil
             }
         }
+    }
+
+    /// The WORKSPACES section (or the plain list in the rail).
+    private var workspaceList: some View {
+        VStack(alignment: .leading, spacing: 3) {
+                    if collapsed {
+                        // The rail has no headings: a thin divider stands in for "WORKSPACES".
+                        Rectangle().fill(theme.hairline).frame(height: 1).padding(.horizontal, 14).padding(.vertical, 6)
+                        workspaceRows
+                    } else {
+                        // The whole list can be folded away, and each workspace folds its own tabs (remembered).
+                        SectionHeader(title: "WORKSPACES", folded: sectionFolded, count: model.state.workspaces.count) {
+                            withAnimation(.easeOut(duration: 0.15)) { sectionFolded.toggle() }
+                        }
+                        if !sectionFolded { workspaceRows }
+                    }
+                }
+        .padding(.horizontal, 10)
     }
 
     /// Every workspace, with its tabs underneath unless folded, then the New Workspace row.

@@ -22,6 +22,7 @@ extension AppModel {
                     .environment(self)
                     .environment(\.theme, Theme.named("default"))
                     .environment(\.colorScheme, scheme)
+                    .environment(\.sidebarSnapshot, true)
                     .frame(width: collapsed ? SidebarState.collapsedWidth : SidebarState.expandedWidth, height: 740)
                 let renderer = ImageRenderer(content: view)
                 renderer.scale = 2
