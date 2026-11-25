@@ -4,6 +4,9 @@ All notable changes. Release notes shown in the update window live in `docs/rele
 
 ## [Unreleased]
 ### Changed
+- The broadcast shortcut is now ⌥⌘B (it was ⌥⌘I; on a US keyboard Option+I is a dead key and did not fire reliably as a menu shortcut).
+
+### Changed
 - Tabs in the top tab bar are no longer draggable: dragging one also moved the whole window. Reorder and move tabs by dragging them in the sidebar (unchanged); the chips still accept a tab dropped from the sidebar.
 
 ### Fixed
@@ -47,7 +50,7 @@ All notable changes. Release notes shown in the update window live in `docs/rele
 - Tab status: a spinner while a command runs, a red dot when one failed in a tab you have not looked at; notifications when commands that took 10 s or more finish in another tab (Settings → Terminal).
 - Workspace templates: save a workspace (layout and folders), add startup commands, open it again in one click (Settings, sidebar menu, palette).
 - Palette search covers command history from every tab and workspace.
-- Broadcast input: type once, send to every pane of a workspace (⌥⌘I).
+- Broadcast input: type once, send to every pane of a workspace (⌥⌘B).
 - Quick terminal: ⌃` drops a terminal from the top of the screen (Settings → Terminal).
 - Import themes (.itermcolors, Ghostty, kitty) and choose any monospaced font.
 - Drag a pane's header onto another pane to swap them; right-click the folder in a pane header to reveal it in Finder or open it in VS Code.

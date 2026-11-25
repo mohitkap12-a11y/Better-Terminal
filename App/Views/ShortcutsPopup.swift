@@ -24,7 +24,7 @@ enum ShortcutCatalog {
     ]
     private static let panes: [ShortcutItem] = [
         item("Split right", "⌘D"), item("Split down", "⇧⌘D"), item("Move between panes", "⌘← ↑ ↓ →"),
-        item("Pane layout", "⌥⌘L"), item("Broadcast typing to all panes", "⌥⌘I"), item("Swap two panes", "drag header")
+        item("Pane layout", "⌥⌘L"), item("Broadcast typing to all panes", "⌥⌘B"), item("Swap two panes", "drag header")
     ]
     private static let search: [ShortcutItem] = [
         item("Command palette", "⌘K"), item("Palette: Actions ⇄ Commands", "← →"),

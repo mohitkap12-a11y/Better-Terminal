@@ -46,7 +46,7 @@ struct CommandPalette: View {
         add("Split Down", "⇧⌘D", "rectangle.split.1x2") { model.split(.down) }
         add("Keyboard Shortcuts", "⌘/", "keyboard") { model.shortcutsOpen = true }
         add("Find in Terminal", "⌘F", "magnifyingglass") { model.openFind() }
-        add(model.active?.broadcast == true ? "Stop Broadcasting Input" : "Broadcast Input to All Panes", "⌥⌘I", "dot.radiowaves.left.and.right") { model.toggleBroadcast() }
+        add(model.active?.broadcast == true ? "Stop Broadcasting Input" : "Broadcast Input to All Panes", "⌥⌘B", "dot.radiowaves.left.and.right") { model.toggleBroadcast() }
         add("Copy Last Command Output", "⌥⌘C", "doc.on.clipboard") { model.copyLastOutput() }
         add("Quick Terminal", "", "chevron.down.square") { QuickTerminal.shared.toggle() }
         add("Save Workspace as Template", "", "square.and.arrow.down") { model.saveTemplate() }

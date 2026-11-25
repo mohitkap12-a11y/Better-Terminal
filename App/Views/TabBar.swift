@@ -26,7 +26,7 @@ struct TabBar: View {
                     Label("Broadcast", systemImage: "dot.radiowaves.left.and.right").font(.caption)
                 }
                 .buttonStyle(.bordered).controlSize(.small).tint(.orange)
-                .help("Typing goes to every pane. Click to stop (⌥⌘I)")
+                .help("Typing goes to every pane. Click to stop (⌥⌘B)")
             }
             Button { model.layoutPickerOpen.toggle() } label: {
                 HStack(spacing: Metrics.s1) {

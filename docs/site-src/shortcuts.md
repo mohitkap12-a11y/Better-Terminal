@@ -26,7 +26,7 @@ Press ⌘/ (or click **Shortcuts** in the sidebar, below Search) for a searchabl
 | Split down | ⇧⌘D |
 | Focus the pane to the left / right / above / below | ⌘← / ⌘→ / ⌘↑ / ⌘↓ |
 | Pane layout picker | ⌥⌘L |
-| Broadcast typing to all panes | ⌥⌘I |
+| Broadcast typing to all panes | ⌥⌘B |
 | Swap two panes | drag a pane header onto another pane |
 
 ## Search and history

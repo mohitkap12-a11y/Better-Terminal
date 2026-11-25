@@ -23,7 +23,7 @@ struct Walkthrough: View {
         Page(title: "Find, links and right-click",
              text: "⌘F searches the scrollback. Links underline when you hover them, and right-click gives you copy, paste, open link, find, split and more. ⌥⌘C copies the last command's output."),
         Page(title: "Know when it's done",
-             text: "A spinner shows while a command runs and a red dot marks a failed one. When a long command finishes in another tab, you get a notification. ⌥⌘I broadcasts what you type to every pane."),
+             text: "A spinner shows while a command runs and a red dot marks a failed one. When a long command finishes in another tab, you get a notification. ⌥⌘B broadcasts what you type to every pane."),
         Page(title: "Quick terminal",
              text: "Turn it on in Settings, then press ⌃` from any app to pop up a small terminal in the bottom-right corner, opened in the folder you were in. Esc or the same key hides it. You can choose another key."),
         Page(title: "Make it yours",

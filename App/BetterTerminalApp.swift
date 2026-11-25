@@ -58,7 +58,7 @@ struct BetterTerminalApp: App {
                 Button("Split Right") { model.split(.right) }.keyboardShortcut("d")
                 Button("Split Down") { model.split(.down) }.keyboardShortcut("d", modifiers: [.command, .shift])
                 Button(model.active?.broadcast == true ? "Stop Broadcasting Input" : "Broadcast Input to All Panes") { model.toggleBroadcast() }
-                    .keyboardShortcut("i", modifiers: [.command, .option])
+                    .keyboardShortcut("b", modifiers: [.command, .option])
                 Divider()
                 Button("Focus Pane Left") { model.focusPane(.left) }.keyboardShortcut(.leftArrow, modifiers: .command).disabled(blocked)
                 Button("Focus Pane Right") { model.focusPane(.right) }.keyboardShortcut(.rightArrow, modifiers: .command).disabled(blocked)

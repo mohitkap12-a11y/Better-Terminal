@@ -37,7 +37,7 @@ A quick tour. Each feature links to its full page.
 
 **[Copy last output](terminal.html#last-output)** (⌥⌘C) copies what the previous command printed.
 
-**[Broadcast input](terminal.html#broadcast)** (⌥⌘I) repeats what you type in every pane of the workspace.
+**[Broadcast input](terminal.html#broadcast)** (⌥⌘B) repeats what you type in every pane of the workspace.
 
 **[Tab status](notifications.html)** shows a spinner while a command runs and a red dot when one failed. Long commands can send a notification.
 
