@@ -226,3 +226,14 @@ footer a { color:var(--muted); text-decoration:none; } footer a:hover { color:va
   .dnav .dmob { display:block; border:1px solid var(--line); border-radius:12px; background:var(--card); padding:8px 12px; }
   .dnav .dmob summary { cursor:pointer; font-weight:600; }
 }
+
+/* Homebrew install command with copy button */
+.brew { display:inline-flex; align-items:center; gap:12px; max-width:100%; padding:7px 7px 7px 18px; border-radius:999px; border:1px solid var(--line-strong); background:var(--card); font-size:14.5px; }
+.brew code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--text); white-space:nowrap; overflow-x:auto; scrollbar-width:none; }
+.brew code::-webkit-scrollbar { display:none; }
+.brew .prompt { color:var(--accent-2); }
+.brew .copy { appearance:none; border:1px solid var(--line); background:var(--card-hover); color:var(--muted); font:inherit; font-size:13px; font-weight:600; padding:8px 14px; border-radius:999px; cursor:pointer; flex:none; }
+.brew .copy:hover { color:var(--text); }
+.brew .copy.done { color:var(--accent-2); border-color:var(--accent-2); }
+.dl .brew { margin:14px 0 6px; }
+@media (max-width:560px) { .brew { font-size:12.5px; padding-left:14px; } }

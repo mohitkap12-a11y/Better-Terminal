@@ -59,3 +59,18 @@
   document.addEventListener('click', function (e) { if (!menu.hidden && !e.target.closest('header.site')) set(false); });
   window.matchMedia('(min-width: 761px)').addEventListener('change', function (e) { if (e.matches) set(false); });
 })();
+
+// Copy button for the Homebrew command
+(function () {
+  document.querySelectorAll('.brew .copy').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var text = b.getAttribute('data-copy');
+      function done() { b.textContent = 'copied'; b.classList.add('done'); setTimeout(function () { b.textContent = 'copy'; b.classList.remove('done'); }, 1800); }
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, fallback); } else { fallback(); }
+      function fallback() {
+        var t = document.createElement('textarea'); t.value = text; t.style.position = 'fixed'; t.style.opacity = '0';
+        document.body.appendChild(t); t.select(); try { document.execCommand('copy'); done(); } catch (e) {} document.body.removeChild(t);
+      }
+    });
+  });
+})();
