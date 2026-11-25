@@ -210,3 +210,24 @@ jobs:
           make_latest: false
           files: dist/appcast-beta.xml
           overwrite_files: true
+
+      - name: Update the Homebrew cask (stable releases only)
+        # Bumps version + sha256 in Casks/better-terminal.rb and pushes it to the tap repo
+        # (mohitkap12-a11y/homebrew-better-terminal) when the HOMEBREW_TAP_TOKEN secret is set
+        # (fine-grained PAT, contents:write on the tap). Users: brew install --cask mohitkap12-a11y/better-terminal/better-terminal
+        if: ${{ env.CHANNEL == 'stable' }}
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          set -euo pipefail
+          SHA="$(awk -v f="BetterTerminal-${VERSION}.dmg" '$2==f{print $1}' dist/SHA256SUMS)"
+          test -n "$SHA" || { echo "::error::no checksum for the DMG"; exit 1; }
+          sed -i '' -E "s/^  version \".*\"/  version \"${VERSION}\"/; s/^  sha256 \".*\"/  sha256 \"${SHA}\"/" Casks/better-terminal.rb
+          cat Casks/better-terminal.rb
+          if [ -z "$TAP_TOKEN" ]; then echo "::warning::HOMEBREW_TAP_TOKEN not set; cask not published to the tap."; exit 0; fi
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/${GITHUB_REPOSITORY_OWNER}/homebrew-better-terminal.git" "$RUNNER_TEMP/tap"
+          mkdir -p "$RUNNER_TEMP/tap/Casks"
+          cp Casks/better-terminal.rb "$RUNNER_TEMP/tap/Casks/"
+          cd "$RUNNER_TEMP/tap"
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A; git diff --cached --quiet || { git commit -m "better-terminal ${VERSION}"; git push; }

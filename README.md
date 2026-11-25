@@ -54,6 +54,15 @@
 
 ## Install
 
+**Homebrew**
+
+```bash
+brew tap mohitkap12-a11y/better-terminal https://github.com/mohitkap12-a11y/Better-Terminal
+brew install --cask better-terminal
+```
+
+**Or manually**
+
 1. Download the DMG from the [latest release](https://github.com/mohitkap12-a11y/Better-Terminal/releases/latest).
 2. Drag **Better Terminal** to Applications.
 
