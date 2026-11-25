@@ -20,6 +20,13 @@ extension EnvironmentValues {
     }
 }
 
+extension View {
+    /// Applies `transform` only when `condition` holds (used to leave out drag and drop while rendering a snapshot).
+    @ViewBuilder func applying<V: View>(if condition: Bool, _ transform: (Self) -> V) -> some View {
+        if condition { transform(self) } else { self }
+    }
+}
+
 /// Full-width sidebar (or an icon rail) with the workspaces, search and settings.
 /// Leaves room at the top for the window's traffic-light buttons.
 struct Sidebar: View {
@@ -141,10 +148,12 @@ struct Sidebar: View {
                         RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(theme.accent, lineWidth: 1.5)
                     }
                 }
-                .draggable(AppModel.workspacePayload(ws.id))
-                .dropDestination(for: String.self) { items, _ in
-                    model.handleDrop(items, ontoWorkspace: ws.id)
-                } isTargeted: { targetedWorkspace = $0 ? ws.id : (targetedWorkspace == ws.id ? nil : targetedWorkspace) }
+                .applying(if: !snapshot) { row in
+                    row.draggable(AppModel.workspacePayload(ws.id))
+                        .dropDestination(for: String.self) { items, _ in
+                            model.handleDrop(items, ontoWorkspace: ws.id)
+                        } isTargeted: { targetedWorkspace = $0 ? ws.id : (targetedWorkspace == ws.id ? nil : targetedWorkspace) }
+                }
                 .contextMenu {
                     Button("New Terminal") { model.newTab(in: ws.id) }
                     Button("Save as Template") { model.saveTemplate(from: ws.id) }
@@ -187,9 +196,11 @@ struct Sidebar: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(theme.accent, lineWidth: 1.5)
             }
         }
-        .dropDestination(for: String.self) { items, _ in
-            model.handleDropOnNewWorkspace(items)
-        } isTargeted: { targetedNew = $0 }
+        .applying(if: !snapshot) { row in
+            row.dropDestination(for: String.self) { items, _ in
+                model.handleDropOnNewWorkspace(items)
+            } isTargeted: { targetedNew = $0 }
+        }
     }
 
     private func icon(_ name: String, selected: Bool) -> some View {
@@ -456,6 +467,7 @@ struct SidebarRow<Icon: View, Trailing: View>: View {
 private struct SidebarTabRow: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
+    @Environment(\.sidebarSnapshot) private var snapshot
     let tab: TerminalTab
     let selected: Bool
     @State private var hovering = false
@@ -490,12 +502,14 @@ private struct SidebarTabRow: View {
         .onHover { hovering = $0 }
         .onTapGesture { model.select(tab: tab.id) }
         .simultaneousGesture(TapGesture(count: 2).onEnded { model.beginRenameTab(tab) })
-        .onMiddleClick { model.requestCloseTab(tab.id) }
-        .draggable(AppModel.tabPayload(tab.id))
-        .dropDestination(for: String.self) { items, _ in
-            model.handleDrop(items, ontoTab: tab.id)
-        } isTargeted: { dropTarget = $0 }
-        .tabContextMenu(tab)
+        .applying(if: !snapshot) { row in
+            row.onMiddleClick { model.requestCloseTab(tab.id) }
+                .draggable(AppModel.tabPayload(tab.id))
+                .dropDestination(for: String.self) { items, _ in
+                    model.handleDrop(items, ontoTab: tab.id)
+                } isTargeted: { dropTarget = $0 }
+                .tabContextMenu(tab)
+        }
         .accessibilityLabel(tab.title)
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
