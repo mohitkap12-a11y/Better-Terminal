@@ -16,7 +16,8 @@ private enum PaletteTab: String, CaseIterable { case actions = "Actions", comman
 struct CommandPalette: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
-    @Environment(\.dismiss) private var dismiss
+    /// Closes the palette (it is an overlay, not a sheet, so a click outside can close it too).
+    private func dismiss() { model.paletteOpen = false }
     @State private var query = ""
     @State private var selection = 0
     @State private var hits: [AppModel.HistoryHit] = []

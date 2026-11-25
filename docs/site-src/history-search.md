@@ -51,7 +51,7 @@ Press **→** (or click the tab) to switch. It lists the **last 30 commands from
 | ⏎ | Open that command's tab and put the command at its prompt. |
 | ⌘⏎ | Open the tab and run the command. |
 | → / ← | Switch between Commands and Actions. |
-| esc | Close. |
+| esc, or a click anywhere outside | Close. |
 
 ## Tips
 

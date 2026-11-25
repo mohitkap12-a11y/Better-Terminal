@@ -33,8 +33,7 @@ struct RootView: View {
         }
         .ignoresSafeArea(.container, edges: .top)
         .background(WindowConfigurator())
-        .sheet(isPresented: Bindable(model).paletteOpen) { CommandPalette() }
-        .sheet(isPresented: Bindable(model).shortcutsOpen) { ShortcutsPopup() }
+        .overlay { popups }
         .alert("Rename tab", isPresented: Binding(get: { model.renamingTab != nil },
                                                   set: { if !$0 { model.renamingTab = nil } })) {
             TextField("Name", text: Bindable(model).renameText)
@@ -50,6 +49,7 @@ struct RootView: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: model.walkthroughOpen)
+        .animation(.easeOut(duration: 0.14), value: model.paletteOpen || model.shortcutsOpen)
         .onAppear {
             model.applyAppearance()
             if !walkthroughSeen { model.walkthroughOpen = true }
@@ -58,6 +58,32 @@ struct RootView: View {
         .onChange(of: model.state.themeMode) { model.applyAppearance() }
         .onChange(of: model.state.themeID) { model.applyAppearance() }
         .onChange(of: model.state.customThemes) { model.applyAppearance() }
+    }
+}
+
+extension RootView {
+    /// The search palette and the shortcuts popup: a card over a dimmed backdrop. A click anywhere outside the card
+    /// (the terminals, the sidebar, the tab bar) closes it, and so does esc.
+    @ViewBuilder fileprivate var popups: some View {
+        if model.paletteOpen || model.shortcutsOpen {
+            ZStack {
+                Color.black.opacity(0.28)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture { model.paletteOpen = false; model.shortcutsOpen = false }
+                    .accessibilityLabel("Close")
+                    .accessibilityAddTraits(.isButton)
+                Group {
+                    if model.paletteOpen { CommandPalette() } else { ShortcutsPopup() }
+                }
+                .background(theme.groundColor, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(theme.border))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .shadow(color: .black.opacity(0.35), radius: 28, y: 10)
+                .onExitCommand { model.paletteOpen = false; model.shortcutsOpen = false }
+            }
+            .transition(.opacity)
+        }
     }
 }
 

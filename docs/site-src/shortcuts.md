@@ -5,7 +5,7 @@ order: 1
 ---
 # Keyboard shortcuts
 
-Press ⌘/ (or click **Shortcuts** in the sidebar, below Search) for a searchable popup with all of these. They are also listed in Settings ▸ Shortcuts, which has a button to open the popup, and in the app's menus.
+Press ⌘/ (or click **Shortcuts** in the sidebar, below Search) for a searchable popup with all of these: type to filter, ↑ ↓ to move the highlight (it wraps around), esc or a click outside to close. They are also listed in Settings ▸ Shortcuts, which has a button to open the popup, and in the app's menus.
 
 ## Tabs and workspaces
 

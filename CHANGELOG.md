@@ -4,6 +4,8 @@ All notable changes. Release notes shown in the update window live in `docs/rele
 
 ## [Unreleased]
 ### Changed
+- The search palette (⌘K) and the Shortcuts popup (⌘/) close when you click anywhere outside them, as well as with esc. They are now a card over a dimmed backdrop instead of a sheet.
+- In the Shortcuts popup the highlight moves with ↑ and ↓ (wrapping around, scrolling into view), like the search palette.
 - The broadcast shortcut is now ⌥⌘B (it was ⌥⌘I; on a US keyboard Option+I is a dead key and did not fire reliably as a menu shortcut).
 - Tabs in the top tab bar are no longer draggable: dragging one also moved the whole window. Reorder and move tabs by dragging them in the sidebar (unchanged); the chips still accept a tab dropped from the sidebar.
 
