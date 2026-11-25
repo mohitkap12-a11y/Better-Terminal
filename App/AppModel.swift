@@ -14,6 +14,9 @@ final class AppModel {
     /// Template commands waiting for their shell's first prompt.
     @ObservationIgnored private var pendingStartup: [UUID: String] = [:]
     @ObservationIgnored private var focusTask: Task<Void, Never>?
+    /// Sample "running" and "failed" marks for the sidebar snapshots (CI only).
+    @ObservationIgnored var sampleRunning: Set<UUID> = []
+    @ObservationIgnored var sampleFailed: Set<UUID> = []
     /// Terminal text that was on screen when the user pressed "Clear saved text": never saved again.
     @ObservationIgnored private var clearedBaseline: [UUID: String] = [:]
     @ObservationIgnored private let integrationDir: URL
