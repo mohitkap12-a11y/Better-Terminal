@@ -3,6 +3,8 @@
 All notable changes. Release notes shown in the update window live in `docs/release-notes/`.
 
 ## [Unreleased]
+### Added
+- MIT license (`LICENSE`) and a list of third-party components (`THIRD_PARTY_NOTICES.md`); the app's copyright line, README and website say so.
 
 ## [0.2.0] - 2026-11-25
 Split panes, a quick terminal, find, workspace templates and a redesigned sidebar. Release notes shown in the update window: [docs/release-notes/v0.2.0.md](docs/release-notes/v0.2.0.md).
