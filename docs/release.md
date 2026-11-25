@@ -85,7 +85,7 @@ scripts/make-dmg.sh 0.1.0
 Stable releases bump `Casks/better-terminal.rb` and push it to the tap repo `<owner>/homebrew-better-terminal`.
 One-time setup: create that empty public repo, and add secret `HOMEBREW_TAP_TOKEN` (fine-grained PAT, Contents: read/write on the tap).
 Users then run `brew install --cask <owner>/better-terminal/better-terminal`.
-Until then, `brew tap <owner>/better-terminal https://github.com/<owner>/Better-Terminal` works straight from this repo's `Casks/`.
+The copy in this repo's `Casks/` is only the source the release step copies to the tap; do not document it as an install source.
 
 ## Troubleshooting
 

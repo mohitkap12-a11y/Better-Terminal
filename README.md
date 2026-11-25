@@ -57,8 +57,7 @@
 **Homebrew**
 
 ```bash
-brew tap mohitkap12-a11y/better-terminal https://github.com/mohitkap12-a11y/Better-Terminal
-brew install --cask better-terminal
+brew install --cask mohitkap12-a11y/better-terminal/better-terminal
 ```
 
 **Or manually**
