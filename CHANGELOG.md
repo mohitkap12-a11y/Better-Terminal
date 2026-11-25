@@ -3,6 +3,9 @@
 All notable changes. Release notes shown in the update window live in `docs/release-notes/`.
 
 ## [Unreleased]
+### Added
+- In the Shortcuts popup (⌘/), ⏎ (or a double-click) runs the highlighted shortcut. Gestures and key combinations that cannot be run from there (middle-click, drag, the arrow keys, ⌃⌘1–9...) are shown dimmed and the footer explains it.
+
 ### Changed
 - The search palette (⌘K) and the Shortcuts popup (⌘/) close when you click anywhere outside them, as well as with esc. They are now a card over a dimmed backdrop instead of a sheet.
 - In the Shortcuts popup the highlight moves with ↑ and ↓ (wrapping around, scrolling into view), like the search palette.
