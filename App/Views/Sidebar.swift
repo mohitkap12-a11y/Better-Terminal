@@ -53,17 +53,7 @@ struct Sidebar: View {
                 .padding(.horizontal, collapsed ? 0 : 16)
                 .frame(maxWidth: .infinity, alignment: collapsed ? .center : .leading)
                 .padding(.top, 52)           // clears the traffic lights
-                .padding(.bottom, 14)
-
-            VStack(alignment: .leading, spacing: 3) {
-                SearchField(collapsed: collapsed) { model.paletteOpen = true }
-                SidebarRow(title: "Shortcuts", isSelected: false, collapsed: collapsed,
-                           action: { model.shortcutsOpen = true }) {
-                    icon("keyboard", selected: false)
-                } trailing: { shortcut("⌘/") }
-            }
-            .padding(.horizontal, 10)
-            .padding(.bottom, 4)
+                .padding(.bottom, 18)
 
             if snapshot {
                 workspaceList
@@ -73,6 +63,11 @@ struct Sidebar: View {
 
             Spacer(minLength: 0)
             VStack(alignment: .leading, spacing: 3) {
+                SearchField(collapsed: collapsed) { model.paletteOpen = true }
+                SidebarRow(title: "Shortcuts", isSelected: false, collapsed: collapsed,
+                           action: { model.shortcutsOpen = true }) {
+                    icon("keyboard", selected: false)
+                } trailing: { shortcut("⌘/") }
                 SidebarRow(title: "Settings", isSelected: model.route == .settings, collapsed: collapsed,
                            action: { model.route = .settings }) {
                     icon("gearshape", selected: model.route == .settings)
