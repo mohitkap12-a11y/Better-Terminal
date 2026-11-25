@@ -3,6 +3,9 @@
 All notable changes. Release notes shown in the update window live in `docs/release-notes/`.
 
 ## [Unreleased]
+### Changed
+- Tabs in the top tab bar are no longer draggable: dragging one also moved the whole window. Reorder and move tabs by dragging them in the sidebar (unchanged); the chips still accept a tab dropped from the sidebar.
+
 ### Fixed
 - Right-clicking a terminal now selects that pane first (active pane and keyboard), so Paste and ⌘V go to the pane you right-clicked and not the one you were in before.
 

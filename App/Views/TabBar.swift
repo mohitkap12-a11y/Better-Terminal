@@ -85,7 +85,8 @@ private struct TabChip: View {
         .onMiddleClick { model.requestCloseTab(tab.id) }
         .onChange(of: selected) { if selected { model.failedTabs.remove(tab.id) } }
         .onHover { hovering = $0 }
-        .draggable(AppModel.tabPayload(tab.id))
+        // Tabs are reordered and moved from the sidebar. Dragging a chip here used to move the whole window as well,
+        // so the chips are not draggable (they still accept a tab dropped from the sidebar).
         .dropDestination(for: String.self) { items, _ in
             model.handleDrop(items, ontoTab: tab.id)
         } isTargeted: { dropTarget = $0 }

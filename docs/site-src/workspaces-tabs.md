@@ -37,7 +37,7 @@ Drag workspaces in the sidebar to reorder them.
 
 - **New tab**: ⌘T, the **+** button, or the command palette. New tabs open in the folder of the previous tab and follow the workspace layout.
 - **Rename**: double-click the tab, or right-click ▸ Rename…. Leave the name empty to go back to the title the shell sets.
-- **Reorder**: drag a tab in the tab bar.
+- **Reorder**: drag a tab in the sidebar. (The tab bar at the top shows the tabs; to keep the window from moving when you press on a tab, tabs are not draggable there.)
 - **Move to another workspace**: drag it onto a workspace in the sidebar, or right-click ▸ Move to Workspace. Its shell, history and saved text move with it. Dropping it on **New Workspace** creates a workspace for it.
 - **Close**: ⌘W, the ✕ on the tab, middle-click, or right-click ▸ Close Tab. A workspace always keeps at least one tab.
 

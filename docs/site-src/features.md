@@ -11,7 +11,7 @@ A quick tour. Each feature links to its full page.
 
 **[Workspaces](workspaces-tabs.html)** give every project its own tabs, layout and folders. Switch with the sidebar or ⌃⌘1–9. The sidebar can be collapsed to a narrow rail, and each workspace's tabs can be folded away.
 
-**[Tabs](workspaces-tabs.html)** can be renamed, dragged to reorder, dragged onto another workspace, or closed with a middle-click. Closing a tab that is running a command asks first.
+**[Tabs](workspaces-tabs.html)** can be renamed, dragged in the sidebar to reorder or onto another workspace, or closed with a middle-click. Closing a tab that is running a command asks first.
 
 **[Pane layouts](panes-layouts.html)** show a workspace's tabs side by side in a grid, from 1×1 up to 6×6. The grid shrinks to fit when you have fewer tabs than slots, and grows back.
 

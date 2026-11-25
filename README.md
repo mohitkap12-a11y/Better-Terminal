@@ -34,7 +34,7 @@
 
 - **Workspaces.** One per project, each with its own tabs, layout and folders. Switch from the sidebar or with `⌃⌘1–9`.
 - **Collapsible sidebar.** Fold the whole workspace list, or each workspace's tabs; the sidebar remembers it.
-- **Drag to organise.** Reorder workspaces and tabs by dragging, drop a tab on a workspace to move it, right-click a tab to rename it or move it to another workspace.
+- **Drag to organise.** Reorder workspaces and tabs by dragging them in the sidebar, drop a tab on a workspace to move it, right-click a tab to rename it or move it to another workspace.
 - **Pane layouts.** Tabs fill a grid: 1×2, 2×1, 2×2 or any custom rows × columns. New tabs follow the layout, and the grid shrinks to fit when you have fewer tabs than slots.
 - **Split panes.** `⌘D` splits right, `⇧⌘D` splits down. Drag a pane header onto another pane to swap them.
 - **Workspace templates.** Save a layout, folders and startup commands; open the whole setup in one click.
