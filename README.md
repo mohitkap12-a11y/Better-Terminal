@@ -19,6 +19,7 @@
   <a href="https://github.com/mohitkap12-a11y/Better-Terminal/actions/workflows/ci.yml"><img src="https://github.com/mohitkap12-a11y/Better-Terminal/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-lightgrey" alt="macOS 14+">
   <img src="https://img.shields.io/badge/Swift-5.9-orange" alt="Swift 5.9">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
 </p>
 
 <p align="center">
@@ -120,4 +121,4 @@ Better Terminal is free and open source. If it saves you time you can [sponsor i
 
 ## License
 
-Open source. See the repository for the license file.
+[MIT](LICENSE), copyright (c) 2026 Mohit Kapoor. Third-party components and their licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
