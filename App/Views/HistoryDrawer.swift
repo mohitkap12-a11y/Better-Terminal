@@ -28,7 +28,8 @@ struct HistoryDrawer: View {
                     .onKeyPress(.upArrow) { move(-1); return .handled }
                     .onKeyPress(.pageDown) { move(8); return .handled }
                     .onKeyPress(.pageUp) { move(-8); return .handled }
-                    .onSubmit { pickSelected(runNow: NSEvent.modifierFlags.contains(.command)) }
+                    // A text field only submits on a plain Return; ⌘⏎ is the hidden button below.
+                    .onSubmit { if !NSEvent.modifierFlags.contains(.command) { pickSelected(runNow: false) } }
                 Toggle(isOn: $failedOnly) { Image(systemName: "exclamationmark.circle") }
                     .toggleStyle(.button).controlSize(.small)
                     .accessibilityLabel("Show failed only").help("Failed only")
@@ -76,6 +77,12 @@ struct HistoryDrawer: View {
             }
         }
         .frame(width: 380)
+        .background {
+            // ⌘⏎ runs the highlighted command (the text field does not report it as a submit).
+            Button("") { pickSelected(runNow: true) }
+                .keyboardShortcut(.return, modifiers: .command)
+                .opacity(0).frame(width: 0, height: 0).accessibilityHidden(true)
+        }
         .onAppear { searchFocused = true }
         .onChange(of: query) { selection = 0 }
         .onChange(of: failedOnly) { selection = 0 }

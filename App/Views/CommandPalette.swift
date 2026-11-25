@@ -75,7 +75,7 @@ struct CommandPalette: View {
                 TextField(tab == .actions ? "Type an action, or press → for your recent commands" : "Search commands from all terminals",
                           text: $query)
                     .textFieldStyle(.plain).font(.title3).focused($focused)
-                    .onSubmit { run(selection) }
+                    .onSubmit { if !NSEvent.modifierFlags.contains(.command) { run(selection) } }
                     .onChange(of: query) { selection = 0 }
                     .onChange(of: tab) { selection = 0 }
                     .task(id: "\(tab.rawValue)|\(query)") { await reload() }
@@ -139,6 +139,12 @@ struct CommandPalette: View {
             }
         }
         .frame(width: 600, height: 440)
+        .background {
+            // ⌘⏎ runs the highlighted item (a text field only reports a plain Return as a submit).
+            Button("") { run(selection) }
+                .keyboardShortcut(.return, modifiers: .command)
+                .opacity(0).frame(width: 0, height: 0).accessibilityHidden(true)
+        }
         .onAppear { focused = true }
     }
 

@@ -63,18 +63,22 @@ Requires macOS 14 Sonoma or later. Apple silicon and Intel.
 | Action | Keys |
 | --- | --- |
 | New tab / close tab | `⌘T` / `⌘W` |
-| Move between panes | `⌘←` `⌘→` `⌘↑` `⌘↓` |
-| Split right / down | `⌘D` / `⇧⌘D` |
-| Find / next / previous | `⌘F` / `⌘G` / `⇧⌘G` |
-| Broadcast to all panes | `⌥⌘B` |
-| Copy last command output | `⌥⌘C` |
-| Quick terminal | `⌃`` (changeable in Settings) |
-| Command palette (→ for Commands) | `⌘K` |
-| Command history | `⇧⌘H` |
-| Pane layout | `⌥⌘L` |
 | New workspace | `⇧⌘N` |
 | Switch workspace | `⌃⌘1`–`⌃⌘9` |
+| Close a tab / rename a tab | middle-click / double-click |
+| Move between panes | `⌘←` `⌘→` `⌘↑` `⌘↓` |
+| Split right / down | `⌘D` / `⇧⌘D` |
+| Pane layout | `⌥⌘L` |
+| Broadcast to all panes | `⌥⌘B` |
+| Swap two panes | drag a pane header onto another |
+| Command palette (→ for Commands) | `⌘K` |
+| Command history | `⇧⌘H` (⏎ insert, ⌘⏎ run) |
+| Find / next / previous | `⌘F` / `⌘G` / `⇧⌘G` |
+| Copy last command output | `⌥⌘C` |
 | Bigger / smaller text | `⌘+` / `⌘−` |
+| Quick terminal | `⌃`` (changeable in Settings) |
+| Keyboard shortcuts popup (⏎ runs one) | `⌘/` |
+| Toggle the sidebar | `⌃⌘S` |
 | Settings | `⌘,` |
 
 ## Your data

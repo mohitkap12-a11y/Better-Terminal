@@ -4,6 +4,11 @@ All notable changes. Release notes shown in the update window live in `docs/rele
 
 ## [Unreleased]
 ### Fixed
+- ⌘⏎ in the command history popover (⇧⌘H) and in the search palette now runs the highlighted command (a text field only reports a plain Return as a submit).
+- ⌃⌘S now really toggles the sidebar (View ▸ Toggle Sidebar). The tooltip and docs named it before it existed.
+- The website, README, docs and Shortcuts list now show the same shortcuts as the app's menus.
+
+### Fixed
 - The search palette (⌘K) now takes its colours from the theme like the Shortcuts popup: the grey list background and separator lines are gone, and the selected row has the same rounded theme-coloured highlight.
 
 ### Fixed

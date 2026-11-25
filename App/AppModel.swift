@@ -26,6 +26,8 @@ final class AppModel {
     var route: AppRoute = .terminal
     var paletteOpen = false
     var shortcutsOpen = false
+    /// Bumped by View ▸ Toggle Sidebar (⌃⌘S); the window reacts by collapsing or expanding the sidebar.
+    var sidebarToggleTick = 0
     var walkthroughOpen = false
     /// Tab being renamed (the alert lives in RootView) and the text typed so far.
     var renamingTab: UUID?
@@ -745,6 +747,24 @@ final class AppModel {
                                                 isARepeat: false, keyCode: 11) else { return }
                 _ = NSApp.mainMenu?.performKeyEquivalent(with: ev)
             }
+            // View ▸ Toggle Sidebar (⌃⌘S) through the real menu.
+            @MainActor func pressSidebarShortcut() {
+                guard let window = self.activeSession()?.nsView.window,
+                      let ev = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [.control, .command],
+                                                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                                                context: nil, characters: "s", charactersIgnoringModifiers: "s",
+                                                isARepeat: false, keyCode: 1) else { return }
+                _ = NSApp.mainMenu?.performKeyEquivalent(with: ev)
+            }
+            let sidebarKey = SidebarState.storageKey
+            let sidebarBefore = (UserDefaults.standard.object(forKey: sidebarKey) as? Bool) ?? true
+            pressSidebarShortcut()
+            try? await Task.sleep(for: .milliseconds(600))
+            let sidebarToggled = UserDefaults.standard.bool(forKey: sidebarKey) == !sidebarBefore
+            lines.append(sidebarToggled ? "PASS sidebar shortcut ⌃⌘S toggles the sidebar" : "FAIL sidebar shortcut ⌃⌘S did not toggle the sidebar")
+            if !sidebarToggled { failed += 1 }
+            if sidebarToggled { pressSidebarShortcut(); try? await Task.sleep(for: .milliseconds(400)) }
+
             let before = self.active?.broadcast ?? false
             pressBroadcastShortcut()
             try? await Task.sleep(for: .milliseconds(400))

@@ -28,6 +28,7 @@ enum ShortcutCatalog {
         item("Close tab", "⌘W") { m in if let id = m.active?.activeTabID { m.requestCloseTab(id) } },
         item("New workspace", "⇧⌘N") { $0.addWorkspace() },
         item("Switch workspace", "⌃⌘1–9"),
+        item("Toggle sidebar", "⌃⌘S") { $0.sidebarToggleTick += 1 },
         item("Close tab with middle-click", "middle-click"),
         item("Rename tab", "double-click") { m in
             if let tab = m.active?.tabs.first(where: { $0.id == m.active?.activeTabID }) { m.beginRenameTab(tab) }

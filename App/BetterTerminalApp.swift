@@ -46,6 +46,7 @@ struct BetterTerminalApp: App {
             CommandMenu("View") {
                 Button("Command Palette") { model.paletteOpen = true }.keyboardShortcut("k")
                 Button("Keyboard Shortcuts") { model.shortcutsOpen = true }.keyboardShortcut("/")
+                Button("Toggle Sidebar") { model.sidebarToggleTick += 1 }.keyboardShortcut("s", modifiers: [.control, .command])
                 Button("Pane Layout") { model.layoutPickerOpen.toggle() }.keyboardShortcut("l", modifiers: [.command, .option])
                 Button("Command History") { model.toggleHistory() }.keyboardShortcut("h", modifiers: [.command, .shift])
                 Button("Bigger Text") { model.state.terminalFontSize = min(32, model.state.terminalFontSize + 1) }

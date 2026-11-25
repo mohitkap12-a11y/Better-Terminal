@@ -58,6 +58,7 @@ Press ⌘/ (or click **Shortcuts** in the sidebar, below Search) for a searchabl
 | Action | Keys |
 | --- | --- |
 | Keyboard shortcuts popup | ⌘/ |
+| Toggle the sidebar (collapse or expand) | ⌃⌘S |
 | Settings | ⌘, |
 | Check for updates | Better Terminal ▸ Check for Updates… |
 
