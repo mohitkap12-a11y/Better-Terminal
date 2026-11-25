@@ -692,6 +692,9 @@ final class AppModel {
                 for (_, session) in allSessions() { session.sendRaw([0x15][...]) }   // ctrl-U: clear the typed letters
             }
 
+            // A fresh CI machine shows the first-launch walkthrough; a returning user does not.
+            self.walkthroughOpen = false
+            UserDefaults.standard.set(true, forKey: "walkthroughSeen")
             await check("launch")
             self.newTab(); await check("new tab")
             self.split(.right); await check("split right")
