@@ -49,6 +49,7 @@ struct RootView: View {
             model.applyAppearance()
             if !walkthroughSeen { model.walkthroughOpen = true }
         }
+        .onChange(of: model.focusKey) { model.scheduleFocusSync() }
         .onChange(of: model.state.themeMode) { model.applyAppearance() }
         .onChange(of: model.state.themeID) { model.applyAppearance() }
         .onChange(of: model.state.customThemes) { model.applyAppearance() }

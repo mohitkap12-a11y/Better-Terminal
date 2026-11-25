@@ -49,6 +49,19 @@ jobs:
           done
           cat "$RUNNER_TEMP/smoke.txt" || { echo "no result file (app crashed or hung)"; exit 1; }
           grep -q '^PASS' "$RUNNER_TEMP/smoke.txt"
+      - name: Keyboard focus test
+        run: |
+          APP=$(find build/Build/Products -name 'Better Terminal.app' -o -name 'BetterTerminal.app' | head -1)
+          BIN="$APP/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print CFBundleExecutable' "$APP/Contents/Info.plist")"
+          "$BIN" --focus-test "$RUNNER_TEMP/focus.txt" &
+          PID=$!
+          for i in $(seq 1 120); do
+            if [ -f "$RUNNER_TEMP/focus.txt" ]; then break; fi
+            if ! kill -0 $PID 2>/dev/null; then break; fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/focus.txt" || { echo "no result file (app crashed or hung)"; exit 1; }
+          grep -q '^ALL PASS' "$RUNNER_TEMP/focus.txt"
       - name: App log
         if: always()
         run: cat ~/Library/Logs/BetterTerminal/app.log 2>/dev/null || true

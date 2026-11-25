@@ -13,6 +13,7 @@ final class AppModel {
     @ObservationIgnored private var sessions: [UUID: TerminalSession] = [:]
     /// Template commands waiting for their shell's first prompt.
     @ObservationIgnored private var pendingStartup: [UUID: String] = [:]
+    @ObservationIgnored private var focusTask: Task<Void, Never>?
     /// Terminal text that was on screen when the user pressed "Clear saved text": never saved again.
     @ObservationIgnored private var clearedBaseline: [UUID: String] = [:]
     @ObservationIgnored private let integrationDir: URL
@@ -59,7 +60,16 @@ final class AppModel {
         if state.notifyLongCommands { Notifier.shared.requestAuthorization() }
         Notifier.shared.onOpenTab = { [weak self] id in self?.select(tab: id); NSApp.activate(ignoringOtherApps: true) }
         QuickTerminal.shared.attach(model: self)
+        for name in [NSApplication.didBecomeActiveNotification, NSWindow.didBecomeKeyNotification] {
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                Task { @MainActor in self?.scheduleFocusSync() }
+            }
+        }
         if state.quickTerminalEnabled { QuickTerminal.shared.start(model: self) }
+        if let i = CommandLine.arguments.firstIndex(of: "--focus-test") {
+            let out = CommandLine.arguments.indices.contains(i + 1) ? CommandLine.arguments[i + 1] : "/tmp/bt-focus.txt"
+            runFocusTest(resultPath: out)
+        }
         if let i = CommandLine.arguments.firstIndex(of: "--smoke-test") {
             let out = CommandLine.arguments.indices.contains(i + 1) ? CommandLine.arguments[i + 1] : "/tmp/bt-smoke.txt"
             runSmokeTest(resultPath: out)
@@ -274,6 +284,7 @@ final class AppModel {
             onFocus: { [weak self] in self?.focusTab(id) },
             onRunning: { [weak self] running in self?.setRunning(running, tab: id) },
             onReady: { [weak self] in self?.runStartupCommand(tab: id) },
+            onAttach: { [weak self] in self?.scheduleFocusSync() },
             rightClickCopies: { [weak self] in self?.state.rightClickCopies ?? false },
             onMenu: { [weak self] action in self?.menuAction(action, tab: id) }))
         s.onInput = { [weak self] data in self?.mirror(data, from: id) }
@@ -360,6 +371,57 @@ final class AppModel {
                 state.workspaces[wi].tabs[ti].cwd = cwd
             }
         }
+    }
+
+    // MARK: Keyboard focus
+    //
+    // Typing must always go to the active tab. Giving a terminal the keyboard only works once its view is inside a
+    // window, which is not yet true right after a new tab, split, workspace switch or coming back from Settings, and
+    // nothing retried. So focus is reconciled centrally: whenever anything that decides "who is active" changes, when a
+    // terminal view joins a window, and when the window or app becomes active, the active terminal takes the keyboard
+    // (unless you are typing in a text field such as the find bar).
+
+    struct FocusKey: Equatable {
+        var workspace: UUID?
+        var tab: UUID?
+        var tabs: [UUID]
+        var route: AppRoute
+        var restarts: Int
+        var overlays: [Bool]
+    }
+
+    /// Everything that can change who should have the keyboard.
+    var focusKey: FocusKey {
+        FocusKey(workspace: state.activeWorkspaceID, tab: active?.activeTabID, tabs: active?.tabs.map(\.id) ?? [],
+                 route: route, restarts: restartCounter,
+                 overlays: [paletteOpen, shortcutsOpen, walkthroughOpen, renamingTab != nil, historyOpenTab != nil,
+                            layoutPickerOpen, findOpen])
+    }
+
+    /// Reconciles now and again shortly after, because SwiftUI attaches new views a moment after the state changes.
+    func scheduleFocusSync() {
+        focusTask?.cancel()
+        focusTask = Task { @MainActor [weak self] in
+            for delay in [0, 50, 150, 400] {
+                if delay > 0 { try? await Task.sleep(for: .milliseconds(delay)) } else { await Task.yield() }
+                if Task.isCancelled { return }
+                self?.syncFocus()
+            }
+        }
+    }
+
+    /// Makes the active terminal the first responder. Returns true when it has the keyboard (or should keep it).
+    @discardableResult
+    func syncFocus() -> Bool {
+        guard route == .terminal, !paletteOpen, !shortcutsOpen, !walkthroughOpen, renamingTab == nil,
+              historyOpenTab == nil, !layoutPickerOpen, let session = activeSession(),
+              let window = session.nsView.window else { return false }
+        if session.hasKeyboardFocus { return true }
+        // Someone is typing in a text field of this window (find bar, ...): leave them alone.
+        if let responder = window.firstResponder, responder is NSText { return true }
+        let ok = session.focus()
+        if !ok { Diagnostics.log("focus: could not give the keyboard to the active terminal") }
+        return ok
     }
 
     // MARK: Status badges, notifications
@@ -583,6 +645,72 @@ final class AppModel {
     func setQuickHotkey(_ raw: String) {
         state.quickTerminalHotkey = raw
         if state.quickTerminalEnabled { QuickTerminal.shared.restart(model: self) }
+    }
+
+    /// `--focus-test <file>`: used by CI. After each way of changing the active terminal (new tab, split, ⌘-arrow,
+    /// workspace switch, Settings round trip, close, palette...) it types two letters through the window's real
+    /// event path and checks they arrived in the active terminal and in no other. Writes one line per step.
+    private func runFocusTest(resultPath: String) {
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(7))
+            guard let self else { return }
+            var lines: [String] = []
+            var failed = 0
+            var counter = 0
+
+            func allSessions() -> [(UUID, TerminalSession)] { self.sessions.map { ($0.key, $0.value) } }
+
+            func check(_ name: String) async {
+                try? await Task.sleep(for: .milliseconds(900))        // let focus reconciliation settle
+                guard let active = self.activeSession(), let window = active.nsView.window else {
+                    lines.append("FAIL \(name): no active terminal or window"); failed += 1; return
+                }
+                counter += 1
+                let marker = "zq" + String(UnicodeScalar(UInt8(96 + (counter % 26))))
+                for ch in marker {
+                    let s = String(ch)
+                    if let down = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                   windowNumber: window.windowNumber, context: nil, characters: s,
+                                                   charactersIgnoringModifiers: s, isARepeat: false, keyCode: 0) {
+                        window.sendEvent(down)
+                    }
+                }
+                try? await Task.sleep(for: .milliseconds(700))
+                var wrong: [UUID] = []
+                var gotIt = false
+                for (id, session) in allSessions() {
+                    let has = session.snapshotText().contains(marker)
+                    if session === active { gotIt = has } else if has { wrong.append(id) }
+                }
+                let focus = active.hasKeyboardFocus
+                if gotIt && wrong.isEmpty && focus {
+                    lines.append("PASS \(name)")
+                } else {
+                    failed += 1
+                    lines.append("FAIL \(name): active got it=\(gotIt), other terminals that got it=\(wrong.count), first responder is active=\(focus)")
+                }
+                for (_, session) in allSessions() { session.sendRaw([0x15][...]) }   // ctrl-U: clear the typed letters
+            }
+
+            await check("launch")
+            self.newTab(); await check("new tab")
+            self.split(.right); await check("split right")
+            self.focusPane(.left); await check("⌘← pane")
+            self.focusPane(.right); await check("⌘→ pane")
+            self.addWorkspace(); await check("new workspace")
+            self.selectWorkspace(at: 0); await check("switch workspace")
+            self.route = .settings; try? await Task.sleep(for: .milliseconds(500))
+            self.route = .terminal; await check("back from Settings")
+            if let id = self.active?.tabs.first?.id { self.select(tab: id); await check("select tab from sidebar") }
+            if let id = self.active?.activeTabID { self.closeTab(id); await check("close active tab") }
+            self.paletteOpen = true; try? await Task.sleep(for: .milliseconds(500))
+            self.paletteOpen = false; await check("palette closed")
+            self.newTab(in: self.state.workspaces[min(1, self.state.workspaces.count - 1)].id); await check("new tab in another workspace")
+
+            lines.append(failed == 0 ? "ALL PASS" : "\(failed) FAILED")
+            try? lines.joined(separator: "\n").write(toFile: resultPath, atomically: true, encoding: .utf8)
+            exit(failed == 0 ? 0 : 1)
+        }
     }
 
     /// `--smoke-test <file>`: used by CI. Runs a command in the first terminal and writes PASS or FAIL to the file.

@@ -7,7 +7,10 @@ import BetterTerminalCore
 /// libghostty can replace the implementation without touching the UI (see ARCHITECTURE.md).
 protocol TerminalSession: AnyObject {
     var nsView: NSView { get }
-    func focus()
+    /// Gives this terminal the keyboard. Returns false when it could not (for example its view is not in a window yet).
+    @discardableResult func focus() -> Bool
+    /// True when this terminal is its window's first responder, i.e. typing goes here.
+    var hasKeyboardFocus: Bool { get }
     func insert(_ text: String)      // replaces the current prompt line, does not run
     func run(_ text: String)         // replaces the current prompt line and runs
     func apply(theme: Theme, scheme: ColorScheme, fontSize: Double, fontFamily: String)
@@ -79,6 +82,12 @@ final class EventFileTailer {
 /// because SwiftTerm sends them straight to the shell without calling the delegate).
 final class BTTerminalView: LocalProcessTerminalView {
     var onPaste: (() -> Void)?
+    /// Called when the view is put into a window (new tab, split, workspace switch...): the moment focus can be given.
+    var onAttach: (() -> Void)?
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window != nil { onAttach?() }
+    }
     var mirroring = false
     override func paste(_ sender: Any) {
         super.paste(sender)
@@ -104,6 +113,8 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
         var onRunning: @MainActor (Bool) -> Void = { _ in }
         /// The shell finished its start-up files and showed its first prompt.
         var onReady: @MainActor () -> Void = {}
+        /// The terminal's view just joined a window.
+        var onAttach: @MainActor () -> Void = {}
         /// Right-click on selected text copies it straight away instead of showing the menu.
         var rightClickCopies: @MainActor () -> Bool = { false }
         /// An item of the terminal's right-click menu that the app handles (find, split, copy output).
@@ -138,6 +149,7 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
         self.shellKind = ShellIntegration.kind(forShellPath: tab.shell)
         super.init()
         view.processDelegate = self
+        view.onAttach = { Task { @MainActor in callbacks.onAttach() } }
         view.changeScrollback(5000)
         // Show what was on screen last time, then a fresh shell starts below it.
         if let saved = restoredText {
@@ -217,7 +229,13 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
     private var bracketedPaste: Bool { shellKind == .zsh || shellKind == .fish }
 
     // MARK: TerminalSession
-    func focus() { view.window?.makeFirstResponder(view) }
+    @discardableResult func focus() -> Bool {
+        guard let w = view.window else { return false }
+        if w.firstResponder === view { return true }
+        return w.makeFirstResponder(view)
+    }
+
+    var hasKeyboardFocus: Bool { view.window?.firstResponder === view }
 
     func insert(_ text: String) {
         view.send(txt: PromptInput.insertPayload(text, bracketedPaste: bracketedPaste))
