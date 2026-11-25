@@ -48,8 +48,8 @@ struct PaneView: View {
             pulse = 1
             withAnimation(.easeOut(duration: 0.75)) { pulse = 0 }
         }
-        .onAppear { if focused { session.focus() } }
-        .onChange(of: focused) { if focused { session.focus() } }
+        .onAppear { if focused { model.scheduleFocusSync() } }
+        .onChange(of: focused) { if focused { model.scheduleFocusSync() } }
     }
 
     private func header(_ session: TerminalSession) -> some View {

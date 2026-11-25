@@ -45,6 +45,8 @@ final class QuickTerminal {
     private var hotKey: EventHotKeyRef?
     private var handler: EventHandlerRef?
     private var escMonitor: Any?
+    /// The app you were in when you opened it, so hiding gives the keyboard back there.
+    private var previousApp: NSRunningApplication?
     /// Where the quick terminal's shell actually is (it reports every folder change), not just where we last sent it.
     private var shellFolder: String?
 
@@ -101,7 +103,11 @@ final class QuickTerminal {
         if let panel, panel.isVisible, panel.isKeyWindow { hide() } else { show() }
     }
 
-    private func hide() { panel?.orderOut(nil) }
+    private func hide() {
+        panel?.orderOut(nil)
+        if let app = previousApp, !app.isTerminated { app.activate(options: []) }
+        previousApp = nil
+    }
 
     private static let margin: CGFloat = 16
     private static let size = NSSize(width: 580, height: 340)
@@ -146,12 +152,14 @@ final class QuickTerminal {
     private func show() {
         guard let model else { return }
         let folder = launchFolder()          // ask before this app takes focus
+        if let front = NSWorkspace.shared.frontmostApplication,
+           front.processIdentifier != ProcessInfo.processInfo.processIdentifier { previousApp = front }
         if session == nil {
             session = model.makeEphemeralSession(name: "Quick Terminal", cwd: folder, onCwd: { [weak self] in
                 self?.shellFolder = self?.normalized($0)
             }, onExit: { [weak self] in
                 // Shell exited: close the panel; the next toggle starts a fresh shell.
-                self?.panel?.orderOut(nil); self?.panel = nil; self?.session = nil; self?.shellFolder = nil
+                self?.hide(); self?.panel = nil; self?.session = nil; self?.shellFolder = nil
             })
             shellFolder = folder.map(normalized)
         } else if let folder, normalized(folder) != shellFolder, session?.hasRunningCommand == false {
