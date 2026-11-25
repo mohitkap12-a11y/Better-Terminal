@@ -34,7 +34,7 @@
 
 - **Workspaces.** One per project, each with its own tabs, layout and folders. Switch from the sidebar or with `⌃⌘1–9`.
 - **Collapsible sidebar.** Fold the whole workspace list, or each workspace's tabs; the sidebar remembers it.
-- **Drag to organise.** Reorder workspaces and tabs by dragging, drop a tab on a workspace to move it, right-click a tab to rename it or move it to another workspace.
+- **Drag to organise.** Reorder workspaces and tabs by dragging them in the sidebar, drop a tab on a workspace to move it, right-click a tab to rename it or move it to another workspace.
 - **Pane layouts.** Tabs fill a grid: 1×2, 2×1, 2×2 or any custom rows × columns. New tabs follow the layout, and the grid shrinks to fit when you have fewer tabs than slots.
 - **Split panes.** `⌘D` splits right, `⇧⌘D` splits down. Drag a pane header onto another pane to swap them.
 - **Workspace templates.** Save a layout, folders and startup commands; open the whole setup in one click.
@@ -44,7 +44,7 @@
 - **Command palette.** `⌘K` for actions, with your last three commands on top. Press `→` for the last 30 commands from every terminal, searchable.
 - **Find in terminal.** `⌘F` with highlighted matches; `⌘G` / `⇧⌘G` to step through them.
 - **Tab status and notifications.** A spinner while a command runs, a red dot when one failed, and a notification when a long command finishes in another tab.
-- **Broadcast input.** `⌥⌘I` repeats your typing in every pane of the workspace.
+- **Broadcast input.** `⌥⌘B` repeats your typing in every pane of the workspace.
 - **Quick terminal.** A global key (`⌃`` by default) pops up a small terminal in the bottom-right corner, in the folder you were in. `Esc` hides it.
 - **Right-click menu and links.** Copy, paste, open link, find, split; links underline on hover. `⌥⌘C` copies the last command's output.
 - **Soft colour themes.** Default, Mist, Sage, Rose, Lavender, Sand, Nord, Black, in light and dark. System follows macOS. Import iTerm2, Ghostty and kitty themes, and pick any monospaced font.
@@ -66,7 +66,7 @@ Requires macOS 14 Sonoma or later. Apple silicon and Intel.
 | Move between panes | `⌘←` `⌘→` `⌘↑` `⌘↓` |
 | Split right / down | `⌘D` / `⇧⌘D` |
 | Find / next / previous | `⌘F` / `⌘G` / `⇧⌘G` |
-| Broadcast to all panes | `⌥⌘I` |
+| Broadcast to all panes | `⌥⌘B` |
 | Copy last command output | `⌥⌘C` |
 | Quick terminal | `⌃`` (changeable in Settings) |
 | Command palette (→ for Commands) | `⌘K` |

@@ -48,7 +48,7 @@ It is taken from the terminal text added since the command started, so it works 
 
 Broadcast repeats what you type in the focused pane in every other pane of the same workspace. It is for jobs like running the same command on several servers.
 
-- Turn it on with ⌥⌘I (Pane menu or command palette). An orange **Broadcast** button appears in the tab bar; click it, or press ⌥⌘I again, to stop.
+- Turn it on with ⌥⌘B (Pane menu or command palette). An orange **Broadcast** button appears in the tab bar; click it, or press ⌥⌘B again, to stop.
 - It is a per-workspace switch and other workspaces are not affected.
 - Typed text, return, tab, delete, escape, arrow keys, home and end, and ⌃-letter combinations are repeated, and so are pastes. Shortcuts that use ⌘ are never repeated.
 - Only the focused pane is the source. Click the pane you want to type in.

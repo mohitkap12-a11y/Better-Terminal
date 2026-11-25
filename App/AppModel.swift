@@ -736,6 +736,23 @@ final class AppModel {
             self.paletteOpen = false; await check("palette closed")
             self.newTab(in: self.state.workspaces[min(1, self.state.workspaces.count - 1)].id); await check("new tab in another workspace")
 
+            // The broadcast shortcut (⌥⌘B), fired through the real main menu like a key press would.
+            @MainActor func pressBroadcastShortcut() {
+                guard let window = self.activeSession()?.nsView.window,
+                      let ev = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [.command, .option],
+                                                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                                                context: nil, characters: "∫", charactersIgnoringModifiers: "b",
+                                                isARepeat: false, keyCode: 11) else { return }
+                _ = NSApp.mainMenu?.performKeyEquivalent(with: ev)
+            }
+            let before = self.active?.broadcast ?? false
+            pressBroadcastShortcut()
+            try? await Task.sleep(for: .milliseconds(400))
+            let toggled = (self.active?.broadcast ?? false) != before
+            lines.append(toggled ? "PASS broadcast shortcut ⌥⌘B toggles broadcast" : "FAIL broadcast shortcut ⌥⌘B did not toggle broadcast")
+            if !toggled { failed += 1 }
+            if toggled { pressBroadcastShortcut(); try? await Task.sleep(for: .milliseconds(300)) }
+
             lines.append(failed == 0 ? "ALL PASS" : "\(failed) FAILED")
             try? lines.joined(separator: "\n").write(toFile: resultPath, atomically: true, encoding: .utf8)
             exit(failed == 0 ? 0 : 1)

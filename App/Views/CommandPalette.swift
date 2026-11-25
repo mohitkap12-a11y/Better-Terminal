@@ -16,7 +16,8 @@ private enum PaletteTab: String, CaseIterable { case actions = "Actions", comman
 struct CommandPalette: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
-    @Environment(\.dismiss) private var dismiss
+    /// Closes the palette (it is an overlay, not a sheet, so a click outside can close it too).
+    private func dismiss() { model.paletteOpen = false }
     @State private var query = ""
     @State private var selection = 0
     @State private var hits: [AppModel.HistoryHit] = []
@@ -46,7 +47,7 @@ struct CommandPalette: View {
         add("Split Down", "⇧⌘D", "rectangle.split.1x2") { model.split(.down) }
         add("Keyboard Shortcuts", "⌘/", "keyboard") { model.shortcutsOpen = true }
         add("Find in Terminal", "⌘F", "magnifyingglass") { model.openFind() }
-        add(model.active?.broadcast == true ? "Stop Broadcasting Input" : "Broadcast Input to All Panes", "⌥⌘I", "dot.radiowaves.left.and.right") { model.toggleBroadcast() }
+        add(model.active?.broadcast == true ? "Stop Broadcasting Input" : "Broadcast Input to All Panes", "⌥⌘B", "dot.radiowaves.left.and.right") { model.toggleBroadcast() }
         add("Copy Last Command Output", "⌥⌘C", "doc.on.clipboard") { model.copyLastOutput() }
         add("Quick Terminal", "", "chevron.down.square") { QuickTerminal.shared.toggle() }
         add("Save Workspace as Template", "", "square.and.arrow.down") { model.saveTemplate() }
