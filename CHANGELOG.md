@@ -3,6 +3,10 @@
 All notable changes. Release notes shown in the update window live in `docs/release-notes/`.
 
 ## [Unreleased]
+### Changed
+- Sidebar redesign: a soft accent wash, glowing icon and sliding indicator on the selected row; an input-style Search field with the ⌘K key cap; workspace rows show a count pill while tabs run and a dot when a command failed; a footer with the version and what is running; a collapse button that glows on hover; the whole sidebar and its labels animate with one easing. Search, Shortcuts and Settings stay at the bottom. Every option is unchanged.
+- README and website screenshots show the new sidebar.
+
 ### Fixed
 - Broadcast input now repeats typing in the other panes (it needs the key events, which the terminal engine does not hand to the app).
 - Dragging a tab in the tab bar no longer moves the window: the tab strip is its own non-draggable host, and only the empty part of it moves the window.
