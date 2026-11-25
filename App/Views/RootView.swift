@@ -55,6 +55,7 @@ struct RootView: View {
             if !walkthroughSeen { model.walkthroughOpen = true }
         }
         .onChange(of: model.focusKey) { model.scheduleFocusSync() }
+        .onChange(of: model.sidebarToggleTick) { withAnimation(SidebarState.animation) { sidebarCollapsed.toggle() } }
         .onChange(of: model.state.themeMode) { model.applyAppearance() }
         .onChange(of: model.state.themeID) { model.applyAppearance() }
         .onChange(of: model.state.customThemes) { model.applyAppearance() }
