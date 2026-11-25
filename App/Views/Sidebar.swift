@@ -350,7 +350,7 @@ private struct SidebarFooter: View {
     }
 
     var body: some View {
-        let running = model.runningTabs.count
+        let running = model.runningCount
         HStack(spacing: 10) {
             Circle().fill(Color.green).frame(width: 7, height: 7)
                 .shadow(color: Color.green.opacity(0.6), radius: 4)
