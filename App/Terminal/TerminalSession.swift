@@ -171,6 +171,10 @@ final class SwiftTermSession: NSObject, TerminalSession, LocalProcessTerminalVie
         rightClickMonitor = NSEvent.addLocalMonitorForEvents(matching: .rightMouseDown) { [weak self] event in
             guard let self, let w = self.view.window, event.window === w,
                   self.view.bounds.contains(self.view.convert(event.locationInWindow, from: nil)) else { return event }
+            // Right-clicking a pane selects it, like a left click: it becomes the active pane and takes the keyboard,
+            // so Paste (or ⌘V afterwards) goes here and not to the pane you were in before.
+            Task { @MainActor in callbacks.onFocus() }
+            w.makeFirstResponder(self.view)
             if self.view.selectionActive, MainActor.assumeIsolated({ callbacks.rightClickCopies() }) {
                 self.view.copy(self)
                 return nil

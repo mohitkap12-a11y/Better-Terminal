@@ -34,6 +34,11 @@ struct Sidebar: View {
     @Environment(\.theme) private var theme
     @Environment(\.sidebarSnapshot) private var snapshot
     @Binding var collapsed: Bool
+    /// The rail temporarily opens while the pointer is over it (so you can switch tabs), and closes when it leaves.
+    @State private var peeking = false
+    @State private var peekTask: Task<Void, Never>?
+    /// What is drawn: the rail, unless the sidebar is expanded or being peeked at.
+    private var rail: Bool { collapsed && !peeking }
 
     @State private var renaming: Workspace?
     @State private var newName = ""
@@ -56,9 +61,9 @@ struct Sidebar: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Brand(collapsed: collapsed)
-                .padding(.horizontal, collapsed ? 0 : 16)
-                .frame(maxWidth: .infinity, alignment: collapsed ? .center : .leading)
+            Brand(collapsed: rail)
+                .padding(.horizontal, rail ? 0 : 16)
+                .frame(maxWidth: .infinity, alignment: rail ? .center : .leading)
                 .padding(.top, 52)           // clears the traffic lights
                 .padding(.bottom, 18)
 
@@ -70,12 +75,12 @@ struct Sidebar: View {
 
             Spacer(minLength: 0)
             VStack(alignment: .leading, spacing: 3) {
-                SearchField(collapsed: collapsed) { model.paletteOpen = true }
-                SidebarRow(title: "Shortcuts", isSelected: false, collapsed: collapsed,
+                SearchField(collapsed: rail) { model.paletteOpen = true }
+                SidebarRow(title: "Shortcuts", isSelected: false, collapsed: rail,
                            action: { model.shortcutsOpen = true }) {
                     icon("keyboard", selected: false)
                 } trailing: { shortcut("⌘/") }
-                SidebarRow(title: "Settings", isSelected: model.route == .settings, collapsed: collapsed,
+                SidebarRow(title: "Settings", isSelected: model.route == .settings, collapsed: rail,
                            action: { model.route = .settings }) {
                     icon("gearshape", selected: model.route == .settings)
                 } trailing: { shortcut("⌘,") }
@@ -83,15 +88,18 @@ struct Sidebar: View {
             .padding(.horizontal, 10)
             .padding(.bottom, 4)
             Rectangle().fill(theme.hairline).frame(height: 1)
-            SidebarFooter(collapsed: collapsed)
+            SidebarFooter(collapsed: rail)
         }
-        .frame(width: collapsed ? SidebarState.collapsedWidth : SidebarState.expandedWidth)
+        .frame(width: rail ? SidebarState.collapsedWidth : SidebarState.expandedWidth)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(theme.sidebar)
         // Title-bar strip that drags the window (the traffic lights sit on top of it).
         .overlay(alignment: .top) { if !snapshot { WindowDragArea().frame(height: 40) } }
         .clipped()
         .overlay(alignment: .trailing) { Rectangle().fill(theme.border).frame(width: 1) }
+        .shadow(color: .black.opacity(peeking ? 0.28 : 0), radius: 18, x: 6)         // floats above the terminals while peeking
+        .onHover { inside in setPeek(inside) }
+        .onChange(of: collapsed) { if !collapsed { peekTask?.cancel(); peeking = false } }
         .overlay(alignment: .topTrailing) {
             SidebarToggle(collapsed: $collapsed).offset(x: 11, y: 56)
         }
@@ -110,10 +118,22 @@ struct Sidebar: View {
         }
     }
 
+    /// Opens the rail shortly after the pointer enters it and closes it a moment after it leaves (so passing by or a
+    /// small slip out of the edge does not make it flicker).
+    private func setPeek(_ inside: Bool) {
+        peekTask?.cancel()
+        guard collapsed else { peeking = false; return }
+        peekTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(inside ? 140 : 240))
+            if Task.isCancelled { return }
+            withAnimation(SidebarState.animation) { peeking = inside }
+        }
+    }
+
     /// The WORKSPACES section (or the plain list in the rail).
     private var workspaceList: some View {
         VStack(alignment: .leading, spacing: 3) {
-                    if collapsed {
+                    if rail {
                         // The rail has no headings: a thin divider stands in for "WORKSPACES".
                         Rectangle().fill(theme.hairline).frame(height: 1).padding(.horizontal, 14).padding(.vertical, 6)
                         workspaceRows
@@ -134,9 +154,9 @@ struct Sidebar: View {
             let selected = model.route == .terminal && ws.id == model.state.activeWorkspaceID
             let folded = foldedWorkspaces.contains(ws.id.uuidString)
             HStack(spacing: 0) {
-                SidebarRow(title: ws.name, isSelected: selected, collapsed: collapsed,
+                SidebarRow(title: ws.name, isSelected: selected, collapsed: rail,
                            action: { model.state.activeWorkspaceID = ws.id; model.route = .terminal }) {
-                    WorkspaceBadge(ws: ws, selected: selected, activity: model.activity(of: ws), showsDot: collapsed)
+                    WorkspaceBadge(ws: ws, selected: selected, activity: model.activity(of: ws), showsDot: rail)
                 } trailing: {
                     HStack(spacing: 6) {
                         WorkspaceCount(activity: model.activity(of: ws))
@@ -169,12 +189,12 @@ struct Sidebar: View {
                     Button("Delete…", role: .destructive) { deleting = ws }
                         .disabled(model.state.workspaces.count < 2)
                 }
-                if !collapsed {
+                if !rail {
                     FoldButton(folded: folded, label: ws.name) { toggleFolded(ws.id) }
                 }
             }
             // Tabs: click to switch, drag to reorder or onto another workspace.
-            if !collapsed && !folded {
+            if !rail && !folded {
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(ws.tabs) { tab in
                         SidebarTabRow(tab: tab, selected: model.route == .terminal && ws.id == model.state.activeWorkspaceID && tab.id == ws.activeTabID)
@@ -187,7 +207,7 @@ struct Sidebar: View {
                 .transition(.opacity)
             }
         }
-        SidebarRow(title: "New Workspace", isSelected: false, collapsed: collapsed,
+        SidebarRow(title: "New Workspace", isSelected: false, collapsed: rail,
                    action: { model.addWorkspace() }) {
             icon("plus", selected: false)
         } trailing: { shortcut("⇧⌘N") }

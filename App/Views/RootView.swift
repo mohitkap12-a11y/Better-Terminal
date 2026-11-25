@@ -8,8 +8,11 @@ struct RootView: View {
     @AppStorage("walkthroughSeen") private var walkthroughSeen = false
 
     var body: some View {
-        HStack(spacing: 0) {
-            Sidebar(collapsed: $sidebarCollapsed).zIndex(1)
+        ZStack(alignment: .topLeading) {
+          HStack(spacing: 0) {
+            // Space for the sidebar (the rail's width when collapsed). The sidebar itself is drawn on top, so
+            // peeking at the rail covers the terminals instead of pushing and re-flowing them.
+            Color.clear.frame(width: sidebarCollapsed ? SidebarState.collapsedWidth : SidebarState.expandedWidth)
             Group {
                 switch model.route {
                 case .terminal:
@@ -25,6 +28,8 @@ struct RootView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(theme.groundColor)
+          }
+          Sidebar(collapsed: $sidebarCollapsed).zIndex(1)
         }
         .ignoresSafeArea(.container, edges: .top)
         .background(WindowConfigurator())
