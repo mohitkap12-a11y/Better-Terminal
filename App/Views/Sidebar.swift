@@ -104,7 +104,7 @@ struct Sidebar: View {
         .onHover { inside in setPeek(inside) }
         .onChange(of: collapsed) { if !collapsed { peekTask?.cancel(); peeking = false } }
         .overlay(alignment: .topTrailing) {
-            SidebarToggle(collapsed: $collapsed).offset(x: 11, y: 56)
+            SidebarToggle(collapsed: $collapsed, onHover: { toggleHover($0) }).offset(x: 11, y: 56)
         }
         .alert("Rename workspace", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("Name", text: $newName)
@@ -127,9 +127,20 @@ struct Sidebar: View {
         peekTask?.cancel()
         guard collapsed else { peeking = false; return }
         peekTask = Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(inside ? 140 : 240))
+            try? await Task.sleep(for: .milliseconds(inside ? 140 : 300))
             if Task.isCancelled { return }
             withAnimation(SidebarState.animation) { peeking = inside }
+        }
+    }
+
+    /// The pin button sits half outside the sidebar's edge, so reaching it counts as leaving the sidebar. While the
+    /// sidebar is open from hovering, the button is part of it: being on the button keeps it open (so you can click it),
+    /// and it closes only after the pointer has left both. It never opens the sidebar by itself.
+    private func toggleHover(_ onButton: Bool) {
+        if onButton {
+            if peeking { peekTask?.cancel() }
+        } else {
+            setPeek(false)
         }
     }
 
@@ -363,6 +374,8 @@ private struct SidebarFooter: View {
 private struct SidebarToggle: View {
     @Environment(\.theme) private var theme
     @Binding var collapsed: Bool
+    /// Tells the sidebar the pointer is on or off the button (it counts as part of the sidebar for hover-to-open).
+    var onHover: (Bool) -> Void = { _ in }
     @State private var hovering = false
 
     var body: some View {
@@ -379,7 +392,7 @@ private struct SidebarToggle: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .onHover { hovering = $0 }
+        .onHover { hovering = $0; onHover($0) }
         .animation(.easeOut(duration: 0.15), value: hovering)
         .help(collapsed ? "Expand sidebar (⌃⌘S)" : "Collapse sidebar (⌃⌘S)")
         .accessibilityLabel(collapsed ? "Expand sidebar" : "Collapse sidebar")

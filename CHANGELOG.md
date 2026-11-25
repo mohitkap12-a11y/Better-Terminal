@@ -3,6 +3,9 @@
 All notable changes. Release notes shown in the update window live in `docs/release-notes/`.
 
 ## [Unreleased]
+### Fixed
+- Reaching the pin button on a collapsed sidebar that opened on hover no longer closes it under the pointer: the button counts as part of the open sidebar, and the sidebar closes 300 ms after the pointer has left both.
+
 ### Changed
 - The search palette's Actions tab no longer shows recent commands at the top; they are on the Commands tab (press →).
 
