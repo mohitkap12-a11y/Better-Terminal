@@ -21,7 +21,6 @@ struct CommandPalette: View {
     @State private var query = ""
     @State private var selection = 0
     @State private var hits: [AppModel.HistoryHit] = []
-    @State private var recent: [AppModel.HistoryHit] = []
     @State private var tab: PaletteTab = .actions
     @FocusState private var focused: Bool
 
@@ -66,15 +65,14 @@ struct CommandPalette: View {
         for m in ThemeMode.allCases { add("Appearance: \(m.rawValue.capitalized)", "", "circle.lefthalf.filled") { model.state.themeMode = m } }
 
         if !q.isEmpty { return all.filter { $0.title.localizedCaseInsensitiveContains(q) } }
-        // Nothing typed: your three most recent commands first.
-        return recent.map { commandItem($0, subtitlePrefix: "recent · ") } + all
+        return all
     }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: Metrics.s2) {
                 Image(systemName: "command").foregroundStyle(theme.muted)
-                TextField(tab == .actions ? "Type an action, or press → for recent commands" : "Search commands from all terminals",
+                TextField(tab == .actions ? "Type an action, or press → for your recent commands" : "Search commands from all terminals",
                           text: $query)
                     .textFieldStyle(.plain).font(.title3).focused($focused)
                     .onSubmit { run(selection) }
@@ -146,7 +144,6 @@ struct CommandPalette: View {
 
     private func reload() async {
         let q = query.trimmingCharacters(in: .whitespaces)
-        recent = model.searchAllHistory("", limit: 3)
         hits = tab == .commands ? model.searchAllHistory(q, limit: 30) : []
     }
 

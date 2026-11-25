@@ -19,7 +19,7 @@ struct Walkthrough: View {
         Page(title: "History for every tab",
              text: "Press ⇧⌘H or the clock button on a pane. Type to search, ↑↓ to move, ⏎ to put the command at the prompt, ⌘⏎ to run it."),
         Page(title: "Command palette",
-             text: "Press ⌘K to jump anywhere. Your last three commands are at the top. Press → for the Commands tab: the last 30 commands from every terminal, searchable. ← goes back to Actions."),
+             text: "Press ⌘K to jump anywhere. Press → for the Commands tab: the last 30 commands from every terminal, searchable. ← goes back to Actions."),
         Page(title: "Find, links and right-click",
              text: "⌘F searches the scrollback. Links underline when you hover them, and right-click gives you copy, paste, open link, find, split and more. ⌥⌘C copies the last command's output."),
         Page(title: "Know when it's done",

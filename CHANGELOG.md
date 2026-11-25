@@ -3,6 +3,9 @@
 All notable changes. Release notes shown in the update window live in `docs/release-notes/`.
 
 ## [Unreleased]
+### Changed
+- The search palette's Actions tab no longer shows recent commands at the top; they are on the Commands tab (press →).
+
 ### Added
 - In the Shortcuts popup (⌘/), ⏎ (or a double-click) runs the highlighted shortcut. Gestures and key combinations that cannot be run from there (middle-click, drag, the arrow keys, ⌃⌘1–9...) are shown dimmed and the footer explains it.
 
@@ -33,7 +36,7 @@ All notable changes. Release notes shown in the update window live in `docs/rele
 
 ### Added
 - Quick terminal key choice (⌃`, ⌥Space, ⌃⌥Space, F12), a status line saying whether the key registered, and a "Show now" button.
-- Command palette: Actions and Commands tabs (→ / ←), your last three commands on top, the last 30 commands from every terminal on the Commands tab, and wrap-around arrow keys.
+- Command palette: Actions and Commands tabs (→ / ←), the last 30 commands from every terminal on the Commands tab, and wrap-around arrow keys.
 - Right-click menu in terminals (copy, paste, select all, open link, find, split, copy last output, clear). Links underline on hover. Setting "Right-click copies selected text" keeps the old behaviour.
 - All shortcuts listed in Settings, grouped, plus a searchable Shortcuts popup (⌘/, or the Shortcuts button below Search in the sidebar; Settings has a button for it too).
 - Walkthrough covers the new features.
