@@ -62,6 +62,18 @@ jobs:
           done
           cat "$RUNNER_TEMP/focus.txt" || { echo "no result file (app crashed or hung)"; exit 1; }
           grep -q '^ALL PASS' "$RUNNER_TEMP/focus.txt"
+      - name: Sidebar snapshots (rendered from the real view, printed as base64 in the log)
+        continue-on-error: true
+        run: |
+          APP=$(find build/Build/Products -name 'Better Terminal.app' -o -name 'BetterTerminal.app' | head -1)
+          BIN="$APP/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print CFBundleExecutable' "$APP/Contents/Info.plist")"
+          "$BIN" --render-sidebar "$RUNNER_TEMP/snaps" > "$RUNNER_TEMP/snaps.log" 2>&1 &
+          PID=$!
+          for i in $(seq 1 60); do
+            if ! kill -0 $PID 2>/dev/null; then break; fi
+            sleep 1
+          done
+          grep -E '^BTSNAP' "$RUNNER_TEMP/snaps.log" || { echo "no snapshots"; tail -20 "$RUNNER_TEMP/snaps.log"; }
       - name: App log
         if: always()
         run: cat ~/Library/Logs/BetterTerminal/app.log 2>/dev/null || true
