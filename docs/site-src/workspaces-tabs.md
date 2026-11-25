@@ -15,7 +15,7 @@ The sidebar lists your workspaces, each with its tabs underneath.
 
 - Click a workspace to open it, or click any tab to jump straight to it, even in another workspace.
 - Switch workspaces from the keyboard with ⌃⌘1 to ⌃⌘9.
-- Collapse the sidebar to a narrow rail with the round button on its edge (or ⌃⌘S). It starts collapsed on a fresh install. While it is a rail, **moving the pointer over it opens it** so you can switch workspace or tab, and it closes again when the pointer leaves. It opens over the terminals, so they do not resize.
+- Collapse the sidebar to a narrow rail with the round button on its edge (or ⌃⌘S). It starts collapsed on a fresh install. While it is a rail, **moving the pointer over it opens it** so you can switch workspace or tab, and it closes again when the pointer leaves. It opens over the terminals, so they do not resize. The rail does not open while the pointer is on or next to the round pin button on its edge, so the button stays put and one click pins the sidebar open; an open sidebar counts the button as part of itself and closes shortly after the pointer has left both.
 - Fold the whole list from the **WORKSPACES** heading, or fold one workspace's tabs with the chevron on its row (or **Hide Tabs** in its menu). The sidebar remembers what you folded.
 
 ## Workspace menu

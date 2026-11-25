@@ -39,7 +39,7 @@ Press ⌘K. The palette has two tabs, shown under the search field:
 
 ### Actions
 
-Open by default. With nothing typed, the top of the list shows your **three most recent commands** from all terminals, followed by the actions: new tab and workspace, split, find, broadcast, copy last output, quick terminal, templates, workspaces, layouts, themes and appearance. Type to filter the actions.
+Open by default. It lists the actions: new tab and workspace, split, find, broadcast, copy last output, quick terminal, templates, workspaces, layouts, themes and appearance. Type to filter the actions.
 
 ### Commands
 

@@ -37,6 +37,8 @@ struct Sidebar: View {
     /// The rail temporarily opens while the pointer is over it (so you can switch tabs), and closes when it leaves.
     @State private var peeking = false
     @State private var peekTask: Task<Void, Never>?
+    /// The pointer is in the rail right next to the pin button: do not open (the button would jump away from it).
+    @State private var nearToggle = false
     /// What is drawn: the rail, unless the sidebar is expanded or being peeked at.
     private var rail: Bool { collapsed && !peeking }
 
@@ -102,9 +104,10 @@ struct Sidebar: View {
         .overlay(alignment: .trailing) { Rectangle().fill(theme.border).frame(width: 1) }
         .shadow(color: .black.opacity(peeking ? 0.28 : 0), radius: 18, x: 6)         // floats above the terminals while peeking
         .onHover { inside in setPeek(inside) }
+        .onContinuousHover { phase in trackPointer(phase) }
         .onChange(of: collapsed) { if !collapsed { peekTask?.cancel(); peeking = false } }
         .overlay(alignment: .topTrailing) {
-            SidebarToggle(collapsed: $collapsed).offset(x: 11, y: 56)
+            SidebarToggle(collapsed: $collapsed, onHover: { toggleHover($0) }).offset(x: 11, y: 56)
         }
         .alert("Rename workspace", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("Name", text: $newName)
@@ -127,9 +130,35 @@ struct Sidebar: View {
         peekTask?.cancel()
         guard collapsed else { peeking = false; return }
         peekTask = Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(inside ? 140 : 240))
+            try? await Task.sleep(for: .milliseconds(inside ? 140 : 300))
             if Task.isCancelled { return }
+            if inside && nearToggle { return }          // on the way to the pin button: stay a rail
             withAnimation(SidebarState.animation) { peeking = inside }
+        }
+    }
+
+    /// The pin button sits half outside the sidebar's edge, so reaching it counts as leaving the sidebar. While the
+    /// sidebar is open from hovering, the button is part of it: being on the button keeps it open (so you can click it),
+    /// and it closes only after the pointer has left both. It never opens the sidebar by itself.
+    private func toggleHover(_ onButton: Bool) {
+        if onButton {
+            peekTask?.cancel()        // no opening (rail) and no closing (open) while the pointer is on the button
+        } else if peeking {
+            setPeek(false)
+        }
+    }
+
+    /// Watches where the pointer is inside the rail. Next to the pin button the rail does not open, so the button
+    /// stays where it is and can be clicked; moving away from that spot opens it as usual.
+    private func trackPointer(_ phase: HoverPhase) {
+        switch phase {
+        case .active(let p):
+            let near = collapsed && !peeking && p.x >= SidebarState.collapsedWidth - 28 && (36...108).contains(p.y)
+            guard near != nearToggle else { return }
+            nearToggle = near
+            if near { peekTask?.cancel() } else { setPeek(true) }
+        case .ended:
+            nearToggle = false
         }
     }
 
@@ -363,6 +392,8 @@ private struct SidebarFooter: View {
 private struct SidebarToggle: View {
     @Environment(\.theme) private var theme
     @Binding var collapsed: Bool
+    /// Tells the sidebar the pointer is on or off the button (it counts as part of the sidebar for hover-to-open).
+    var onHover: (Bool) -> Void = { _ in }
     @State private var hovering = false
 
     var body: some View {
@@ -379,7 +410,7 @@ private struct SidebarToggle: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .onHover { hovering = $0 }
+        .onHover { hovering = $0; onHover($0) }
         .animation(.easeOut(duration: 0.15), value: hovering)
         .help(collapsed ? "Expand sidebar (⌃⌘S)" : "Collapse sidebar (⌃⌘S)")
         .accessibilityLabel(collapsed ? "Expand sidebar" : "Collapse sidebar")
