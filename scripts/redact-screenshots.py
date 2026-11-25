@@ -2,20 +2,25 @@
 """Replaces the text inside the six terminal panes (and the folder path in each pane header) of a full-window
 Better Terminal screenshot with generic sample content, so no real names, hosts or paths are published.
 
-usage: redact-screenshots.py dark|light input.png output.png
+usage: redact-screenshots.py dark|light input.png output.png [sidebar.png]
+
+With a fourth argument (the `window-sidebar-*.png` that the CI sidebar snapshot prints, 2x, 266 x 1308 points) the old
+sidebar in the capture is replaced by the new design: the terminal area is squeezed horizontally to make room for the
+wider sidebar, and the window's rounded corners and traffic lights are kept.
 Needs Pillow. Geometry matches captures of the app at 1966x1405 (window with a hidden title bar, 1x3 + 1x3 panes).
 """
 import sys
 from PIL import Image, ImageDraw, ImageFont
 
 MODE, SRC, DST = sys.argv[1], sys.argv[2], sys.argv[3]
+SIDEBAR = sys.argv[4] if len(sys.argv) > 4 else None
 
 GEOM = {
     # column x ranges, row content/header y ranges
     "dark":  dict(cols=[(285, 828), (829, 1373), (1374, 1916)], header=[(72, 100), (706, 734)],
-                  content=[(101, 705), (735, 1337)]),
+                  content=[(101, 705), (735, 1337)], window=(48, 30, 1917, 1338)),
     "light": dict(cols=[(284, 827), (828, 1372), (1373, 1916)], header=[(70, 98), (704, 732)],
-                  content=[(99, 703), (733, 1336)]),
+                  content=[(99, 703), (733, 1336)], window=(48, 28, 1917, 1336)),
 }[MODE]
 
 PALETTE = {
@@ -140,5 +145,26 @@ for r in range(2):
                 cx = x0 + 1 + col_i * CELL_W
                 d.rectangle([cx, y + 1, cx + CELL_W - 1, y + LINE_H - 2], outline=color("fg"), width=1)
             y += LINE_H
+if SIDEBAR:
+    original = Image.open(SRC).convert("RGBA")
+    left, top, right, bottom = GEOM["window"]
+    height = bottom - top
+    side_w = 252
+    sb = Image.open(SIDEBAR).convert("RGBA")
+    sb = sb.resize((sb.width // 2, sb.height // 2), Image.LANCZOS)          # the render is 2x
+    assert sb.height == height, f"sidebar render is {sb.height}px tall, the window is {height}px"
+    core, extra = sb.crop((0, 0, side_w, height)), sb.crop((side_w, 0, sb.width, height))
+    # terminal area: squeeze it to fit beside the wider sidebar
+    old_x0 = GEOM["cols"][0][0]
+    content = im.crop((old_x0, top, right, bottom))
+    content = content.resize((right - (left + side_w), height), Image.LANCZOS)
+    im.paste(content, (left + side_w, top), content)
+    # sidebar, cut to the window's rounded corners (the capture's alpha tells where the window is)
+    alpha = original.crop((left, top, left + side_w, bottom)).getchannel("A").point(lambda a: 255 if a >= 250 else 0)
+    im.paste(core, (left, top), Image.composite(core.getchannel("A"), Image.new("L", core.size, 0), alpha))
+    im.paste(extra, (left + side_w, top), extra)                              # the collapse button on the edge
+    # the real traffic lights from the capture
+    lights = original.crop((left + 6, top + 4, left + 80, top + 28))
+    im.paste(lights, (left + 6, top + 4))
 im.save(DST, optimize=True)
 print("wrote", DST)

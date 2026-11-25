@@ -14,6 +14,9 @@ final class AppModel {
     /// Template commands waiting for their shell's first prompt.
     @ObservationIgnored private var pendingStartup: [UUID: String] = [:]
     @ObservationIgnored private var focusTask: Task<Void, Never>?
+    /// Sample "running" and "failed" marks for the sidebar snapshots (CI only).
+    @ObservationIgnored var sampleRunning: Set<UUID> = []
+    @ObservationIgnored var sampleFailed: Set<UUID> = []
     /// Terminal text that was on screen when the user pressed "Clear saved text": never saved again.
     @ObservationIgnored private var clearedBaseline: [UUID: String] = [:]
     @ObservationIgnored private let integrationDir: URL
@@ -45,7 +48,12 @@ final class AppModel {
 
     init() {
         let store: WorkspaceStore
-        if let s = try? WorkspaceStore(directory: WorkspaceStore.defaultDirectory()) {
+        // The CI test modes (smoke, focus, sidebar snapshots) add workspaces and tabs: they must never touch your real data.
+        let isTestRun = ["--smoke-test", "--focus-test", "--render-sidebar"].contains { CommandLine.arguments.contains($0) }
+        let directory = isTestRun
+            ? FileManager.default.temporaryDirectory.appendingPathComponent("BetterTerminal-test-\(UUID().uuidString)")
+            : WorkspaceStore.defaultDirectory()
+        if let s = try? WorkspaceStore(directory: directory) {
             store = s
         } else {
             // Fallback so the app still launches if Application Support is unwritable.
@@ -66,6 +74,10 @@ final class AppModel {
             }
         }
         if state.quickTerminalEnabled { QuickTerminal.shared.start(model: self) }
+        if let i = CommandLine.arguments.firstIndex(of: "--render-sidebar") {
+            let out = CommandLine.arguments.indices.contains(i + 1) ? CommandLine.arguments[i + 1] : "/tmp/bt-sidebar"
+            runSidebarSnapshots(into: out)
+        }
         if let i = CommandLine.arguments.firstIndex(of: "--focus-test") {
             let out = CommandLine.arguments.indices.contains(i + 1) ? CommandLine.arguments[i + 1] : "/tmp/bt-focus.txt"
             runFocusTest(resultPath: out)
@@ -89,6 +101,18 @@ final class AppModel {
     var allThemes: [Theme] { Theme.all + state.customThemes.map(Theme.init(custom:)) }
     var theme: Theme { allThemes.first { $0.id == state.themeID } ?? Theme.all[0] }
     /// The imported theme in use, if any. Those have one look (light or dark), so they decide the appearance.
+    /// Tabs with a command running right now, counting only tabs that still exist.
+    var runningCount: Int {
+        state.workspaces.reduce(0) { $0 + $1.tabs.filter { runningTabs.contains($0.id) }.count }
+    }
+
+    /// Running tabs (a count) or a failed command in a workspace, for the sidebar.
+    func activity(of ws: Workspace) -> WorkspaceActivity {
+        let running = ws.tabs.filter { runningTabs.contains($0.id) }.count
+        if running > 0 { return .running(running) }
+        return ws.tabs.contains { failedTabs.contains($0.id) } ? .failed : .none
+    }
+
     /// Folder of the tab you are looking at (the quick terminal opens there when launched from inside the app).
     var activeTabFolder: String? { active?.tabs.first { $0.id == active?.activeTabID }?.cwd }
     var activeCustomTheme: CustomTheme? { state.customThemes.first { "custom-" + $0.id == state.themeID } }
@@ -128,6 +152,7 @@ final class AppModel {
         state.workspaces[i].tabs.forEach {
             sessions[$0.id]?.terminate(); sessions[$0.id] = nil
             clearedBaseline[$0.id] = nil
+            runningTabs.remove($0.id); failedTabs.remove($0.id)      // no phantom "running" after the workspace is gone
             store.deleteHistory(tab: $0.id)
             store.deleteSnapshot(tab: $0.id)
         }
@@ -313,6 +338,7 @@ final class AppModel {
     private func restart(tab id: UUID) {
         saveSnapshot(of: id)               // keep the text when the shell exits and a new one starts
         sessions[id] = nil
+        runningTabs.remove(id)             // the shell is gone: nothing is running in this tab any more
         guard state.workspaces.contains(where: { $0.tabs.contains { $0.id == id } }) else { return }
         restartCounter += 1
     }

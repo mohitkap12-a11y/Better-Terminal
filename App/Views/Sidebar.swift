@@ -3,9 +3,28 @@ import BetterTerminalCore
 
 enum SidebarState {
     static let storageKey = "sidebarCollapsed"
-    static let expandedWidth: CGFloat = 236
-    static let collapsedWidth: CGFloat = 80
-    static let animation = Animation.spring(response: 0.38, dampingFraction: 0.86)
+    static let expandedWidth: CGFloat = 252
+    static let collapsedWidth: CGFloat = 72
+    /// One easing for the whole sidebar: quick start, soft landing (the width, the chevron, the labels).
+    static let animation = Animation.timingCurve(0.4, 0, 0.2, 1, duration: 0.26)
+    static let labelFade = Animation.easeOut(duration: 0.16)
+    static let selection = Animation.timingCurve(0.4, 0, 0.2, 1, duration: 0.28)
+}
+
+private struct SidebarSnapshotKey: EnvironmentKey { static let defaultValue = false }
+extension EnvironmentValues {
+    /// True while the sidebar is rendered to an image in CI: no scroll view and no window-drag strip, which cannot be drawn offscreen.
+    var sidebarSnapshot: Bool {
+        get { self[SidebarSnapshotKey.self] }
+        set { self[SidebarSnapshotKey.self] = newValue }
+    }
+}
+
+extension View {
+    /// Applies `transform` only when `condition` holds (used to leave out drag and drop while rendering a snapshot).
+    @ViewBuilder func applying<V: View>(if condition: Bool, _ transform: (Self) -> V) -> some View {
+        if condition { transform(self) } else { self }
+    }
 }
 
 /// Full-width sidebar (or an icon rail) with the workspaces, search and settings.
@@ -13,6 +32,7 @@ enum SidebarState {
 struct Sidebar: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
+    @Environment(\.sidebarSnapshot) private var snapshot
     @Binding var collapsed: Bool
 
     @State private var renaming: Workspace?
@@ -42,28 +62,15 @@ struct Sidebar: View {
                 .padding(.top, 52)           // clears the traffic lights
                 .padding(.bottom, 18)
 
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 3) {
-                    if collapsed {
-                        workspaceRows
-                    } else {
-                        // The whole list can be folded away, and each workspace folds its own tabs (remembered).
-                        SectionHeader(title: "WORKSPACES", folded: sectionFolded, count: model.state.workspaces.count) {
-                            withAnimation(.easeOut(duration: 0.15)) { sectionFolded.toggle() }
-                        }
-                        if !sectionFolded { workspaceRows }
-                    }
-                }
-                .padding(.horizontal, 10)
+            if snapshot {
+                workspaceList
+            } else {
+                ScrollView(showsIndicators: false) { workspaceList }
             }
 
             Spacer(minLength: 0)
-            Rectangle().fill(theme.hairline).frame(height: 1).padding(.horizontal, 14)
             VStack(alignment: .leading, spacing: 3) {
-                SidebarRow(title: "Search", isSelected: false, collapsed: collapsed,
-                           action: { model.paletteOpen = true }) {
-                    icon("magnifyingglass", selected: false)
-                } trailing: { shortcut("⌘K") }
+                SearchField(collapsed: collapsed) { model.paletteOpen = true }
                 SidebarRow(title: "Shortcuts", isSelected: false, collapsed: collapsed,
                            action: { model.shortcutsOpen = true }) {
                     icon("keyboard", selected: false)
@@ -73,13 +80,16 @@ struct Sidebar: View {
                     icon("gearshape", selected: model.route == .settings)
                 } trailing: { shortcut("⌘,") }
             }
-            .padding(10)
+            .padding(.horizontal, 10)
+            .padding(.bottom, 4)
+            Rectangle().fill(theme.hairline).frame(height: 1)
+            SidebarFooter(collapsed: collapsed)
         }
         .frame(width: collapsed ? SidebarState.collapsedWidth : SidebarState.expandedWidth)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(theme.sidebar)
         // Title-bar strip that drags the window (the traffic lights sit on top of it).
-        .overlay(alignment: .top) { WindowDragArea().frame(height: 40) }
+        .overlay(alignment: .top) { if !snapshot { WindowDragArea().frame(height: 40) } }
         .clipped()
         .overlay(alignment: .trailing) { Rectangle().fill(theme.border).frame(width: 1) }
         .overlay(alignment: .topTrailing) {
@@ -100,6 +110,24 @@ struct Sidebar: View {
         }
     }
 
+    /// The WORKSPACES section (or the plain list in the rail).
+    private var workspaceList: some View {
+        VStack(alignment: .leading, spacing: 3) {
+                    if collapsed {
+                        // The rail has no headings: a thin divider stands in for "WORKSPACES".
+                        Rectangle().fill(theme.hairline).frame(height: 1).padding(.horizontal, 14).padding(.vertical, 6)
+                        workspaceRows
+                    } else {
+                        // The whole list can be folded away, and each workspace folds its own tabs (remembered).
+                        SectionHeader(title: "WORKSPACES", folded: sectionFolded, count: model.state.workspaces.count) {
+                            withAnimation(.easeOut(duration: 0.15)) { sectionFolded.toggle() }
+                        }
+                        if !sectionFolded { workspaceRows }
+                    }
+                }
+        .padding(.horizontal, 10)
+    }
+
     /// Every workspace, with its tabs underneath unless folded, then the New Workspace row.
     @ViewBuilder private var workspaceRows: some View {
         ForEach(Array(model.state.workspaces.enumerated()), id: \.element.id) { index, ws in
@@ -108,19 +136,24 @@ struct Sidebar: View {
             HStack(spacing: 0) {
                 SidebarRow(title: ws.name, isSelected: selected, collapsed: collapsed,
                            action: { model.state.activeWorkspaceID = ws.id; model.route = .terminal }) {
-                    WorkspaceBadge(ws: ws, selected: selected)
+                    WorkspaceBadge(ws: ws, selected: selected, activity: model.activity(of: ws), showsDot: collapsed)
                 } trailing: {
-                    shortcut("⌃⌘\(index + 1)")
+                    HStack(spacing: 6) {
+                        WorkspaceCount(activity: model.activity(of: ws))
+                        shortcut("⌃⌘\(index + 1)")
+                    }
                 }
                 .overlay {
                     if targetedWorkspace == ws.id {
                         RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(theme.accent, lineWidth: 1.5)
                     }
                 }
-                .draggable(AppModel.workspacePayload(ws.id))
-                .dropDestination(for: String.self) { items, _ in
-                    model.handleDrop(items, ontoWorkspace: ws.id)
-                } isTargeted: { targetedWorkspace = $0 ? ws.id : (targetedWorkspace == ws.id ? nil : targetedWorkspace) }
+                .applying(if: !snapshot) { row in
+                    row.draggable(AppModel.workspacePayload(ws.id))
+                        .dropDestination(for: String.self) { items, _ in
+                            model.handleDrop(items, ontoWorkspace: ws.id)
+                        } isTargeted: { targetedWorkspace = $0 ? ws.id : (targetedWorkspace == ws.id ? nil : targetedWorkspace) }
+                }
                 .contextMenu {
                     Button("New Terminal") { model.newTab(in: ws.id) }
                     Button("Save as Template") { model.saveTemplate(from: ws.id) }
@@ -142,9 +175,16 @@ struct Sidebar: View {
             }
             // Tabs: click to switch, drag to reorder or onto another workspace.
             if !collapsed && !folded {
-                ForEach(ws.tabs) { tab in
-                    SidebarTabRow(tab: tab, selected: model.route == .terminal && ws.id == model.state.activeWorkspaceID && tab.id == ws.activeTabID)
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(ws.tabs) { tab in
+                        SidebarTabRow(tab: tab, selected: model.route == .terminal && ws.id == model.state.activeWorkspaceID && tab.id == ws.activeTabID)
+                    }
                 }
+                // A thin guide ties the tabs to their workspace.
+                .overlay(alignment: .leading) {
+                    Rectangle().fill(theme.hairline).frame(width: 1).padding(.leading, 22).padding(.vertical, 2)
+                }
+                .transition(.opacity)
             }
         }
         SidebarRow(title: "New Workspace", isSelected: false, collapsed: collapsed,
@@ -156,15 +196,18 @@ struct Sidebar: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(theme.accent, lineWidth: 1.5)
             }
         }
-        .dropDestination(for: String.self) { items, _ in
-            model.handleDropOnNewWorkspace(items)
-        } isTargeted: { targetedNew = $0 }
+        .applying(if: !snapshot) { row in
+            row.dropDestination(for: String.self) { items, _ in
+                model.handleDropOnNewWorkspace(items)
+            } isTargeted: { targetedNew = $0 }
+        }
     }
 
     private func icon(_ name: String, selected: Bool) -> some View {
         Image(systemName: name)
             .font(.system(size: 13.5, weight: .medium))
             .foregroundStyle(selected ? theme.accent : theme.muted)
+            .shadow(color: selected ? theme.accent.opacity(0.55) : .clear, radius: 5)
     }
 
     private func shortcut(_ keys: String) -> some View {
@@ -172,9 +215,20 @@ struct Sidebar: View {
     }
 }
 
+/// What is going on in a workspace's tabs: something running, or something that failed since you last looked.
+enum WorkspaceActivity: Equatable {
+    case none
+    case running(Int)
+    case failed
+}
+
 private struct WorkspaceBadge: View {
+    @Environment(\.theme) private var theme
     let ws: Workspace
     let selected: Bool
+    var activity: WorkspaceActivity = .none
+    /// In the rail there is no room for a count, so the activity shows as a dot on the badge.
+    var showsDot = false
 
     var body: some View {
         ZStack {
@@ -185,25 +239,140 @@ private struct WorkspaceBadge: View {
                 .foregroundStyle(selected ? Color.white : Color(hex: ws.colorHex))
         }
         .frame(width: 22, height: 22)
-    }
-}
-
-private struct Brand: View {
-    let collapsed: Bool
-
-    var body: some View {
-        HStack(spacing: 10) {
-            if let icon = NSApp.applicationIconImage {
-                Image(nsImage: icon).resizable().interpolation(.high).frame(width: 40, height: 40).padding(-4)
-            }
-            if !collapsed {
-                Text("Better Terminal").font(.system(size: 14, weight: .semibold)).fixedSize().transition(.opacity)
+        .shadow(color: selected ? Color(hex: ws.colorHex).opacity(0.5) : .clear, radius: 6)
+        .overlay(alignment: .topTrailing) {
+            if showsDot, activity != .none {
+                Circle().fill(activity == .failed ? Color.red : theme.accent)
+                    .frame(width: 8, height: 8)
+                    .overlay(Circle().strokeBorder(theme.sidebar, lineWidth: 1.5))
+                    .shadow(color: (activity == .failed ? Color.red : theme.accent).opacity(0.6), radius: 4)
+                    .offset(x: 3, y: -3)
             }
         }
     }
 }
 
-/// The round button on the sidebar's edge that collapses it to icons and back.
+/// Glowing count pill (tabs running) or a red dot (a command failed), at the end of a workspace row.
+private struct WorkspaceCount: View {
+    @Environment(\.theme) private var theme
+    let activity: WorkspaceActivity
+
+    var body: some View {
+        switch activity {
+        case .none:
+            EmptyView()
+        case .running(let n):
+            Text("\(n)")
+                .font(.system(size: 10.5, weight: .semibold)).monospacedDigit()
+                .foregroundStyle(theme.onAccent)
+                .padding(.horizontal, 6).frame(minWidth: 18, minHeight: 16)
+                .background(theme.accent, in: Capsule())
+                .shadow(color: theme.accent.opacity(0.45), radius: 5)
+                .accessibilityLabel("\(n) running")
+        case .failed:
+            Circle().fill(Color.red).frame(width: 7, height: 7)
+                .shadow(color: Color.red.opacity(0.6), radius: 4)
+                .accessibilityLabel("A command failed")
+        }
+    }
+}
+
+/// The app mark with a soft glow, and a one-line description.
+private struct Brand: View {
+    @Environment(\.theme) private var theme
+    let collapsed: Bool
+
+    var body: some View {
+        HStack(spacing: 11) {
+            Group {
+                if let icon = NSApp.applicationIconImage {
+                    Image(nsImage: icon).resizable().interpolation(.high).frame(width: 40, height: 40).padding(-4)
+                }
+            }
+            .frame(width: 32, height: 32)
+            .shadow(color: theme.accent.opacity(0.35), radius: 10)
+            if !collapsed {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Better Terminal").font(.system(size: 14.5, weight: .semibold)).tracking(-0.2)
+                    Text("Workspaces & terminals").font(.system(size: 10.5)).foregroundStyle(theme.muted)
+                }
+                .fixedSize()
+                .transition(.opacity.animation(SidebarState.labelFade))
+            }
+        }
+    }
+}
+
+/// An input-looking search button with the shortcut as a key cap; just the magnifier in the rail.
+private struct SearchField: View {
+    @Environment(\.theme) private var theme
+    let collapsed: Bool
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass").font(.system(size: 13, weight: .medium))
+                if !collapsed {
+                    Text("Search…").font(.system(size: 13)).lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text("⌘K").font(.system(size: 10.5, design: .rounded)).foregroundStyle(theme.muted)
+                        .padding(.horizontal, 6).padding(.vertical, 1)
+                        .background(theme.track, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                }
+            }
+            .foregroundStyle(hovering ? Color.primary : theme.muted)
+            .padding(.horizontal, collapsed ? 0 : 12)
+            .frame(maxWidth: .infinity, alignment: collapsed ? .center : .leading)
+            .frame(height: 36)
+            .background(hovering ? theme.hover : theme.card, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(hovering ? Color.primary.opacity(0.18) : theme.border))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .animation(.easeOut(duration: 0.15), value: hovering)
+        .help(collapsed ? "Search (⌘K)" : "")
+        .accessibilityLabel("Search pages and actions")
+    }
+}
+
+/// A status dot and the version at the bottom, like a status bar.
+private struct SidebarFooter: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.theme) private var theme
+    let collapsed: Bool
+
+    private var version: String {
+        (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String).map { "v\($0)" } ?? "dev"
+    }
+
+    var body: some View {
+        let running = model.runningCount
+        HStack(spacing: 10) {
+            Circle().fill(Color.green).frame(width: 7, height: 7)
+                .shadow(color: Color.green.opacity(0.6), radius: 4)
+            if !collapsed {
+                Text(version).font(.system(size: 11.5)).foregroundStyle(theme.muted)
+                Spacer(minLength: 4)
+                if running > 0 {
+                    Text("\(running) running").font(.system(size: 11.5)).foregroundStyle(theme.accent)
+                } else {
+                    Text("idle").font(.system(size: 11.5)).foregroundStyle(theme.faint)
+                }
+            }
+        }
+        .padding(.horizontal, collapsed ? 0 : 22)
+        .frame(maxWidth: .infinity, alignment: collapsed ? .center : .leading)
+        .frame(height: 34)
+        .help(collapsed ? "\(version) · \(running == 0 ? "idle" : "\(running) running")" : "")
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// The round button on the sidebar's edge that collapses it to icons and back. Glows when hovered.
 private struct SidebarToggle: View {
     @Environment(\.theme) private var theme
     @Binding var collapsed: Bool
@@ -215,19 +384,23 @@ private struct SidebarToggle: View {
                 .font(.system(size: 9, weight: .bold))
                 .rotationEffect(.degrees(collapsed ? 180 : 0))
                 .foregroundStyle(hovering ? Color.primary : theme.muted)
-                .frame(width: 22, height: 22)
+                .frame(width: 24, height: 24)
                 .background(theme.groundColor, in: Circle())
-                .overlay(Circle().strokeBorder(theme.border))
+                .overlay(Circle().strokeBorder(hovering ? theme.accent : theme.border))
+                .overlay(Circle().strokeBorder(theme.accent.opacity(0.18), lineWidth: 3).padding(-2).opacity(hovering ? 1 : 0))
+                .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
+        .animation(.easeOut(duration: 0.15), value: hovering)
         .help(collapsed ? "Expand sidebar (⌃⌘S)" : "Collapse sidebar (⌃⌘S)")
         .accessibilityLabel(collapsed ? "Expand sidebar" : "Collapse sidebar")
     }
 }
 
 /// One sidebar entry: icon, title and trailing hint; as a rail, the icon alone with the title as a tooltip.
+/// The selected row has a soft accent wash, a glowing icon and an indicator bar that slides in on the left edge.
 struct SidebarRow<Icon: View, Trailing: View>: View {
     @Environment(\.theme) private var theme
     let title: String
@@ -247,32 +420,46 @@ struct SidebarRow<Icon: View, Trailing: View>: View {
                         .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
                         .foregroundStyle(isSelected || hovering ? Color.primary : theme.muted)
                         .lineLimit(1)
+                        .transition(.opacity.animation(SidebarState.labelFade))
                     Spacer(minLength: 4)
-                    trailing()
+                    trailing().transition(.opacity.animation(SidebarState.labelFade))
                 }
             }
-            .padding(.leading, collapsed ? 0 : 10)
+            .padding(.leading, collapsed ? 0 : 12)
             .padding(.trailing, collapsed ? 0 : 10)
             .frame(maxWidth: .infinity, alignment: collapsed ? .center : .leading)
-            .frame(height: 32)
-            .background {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous).fill(theme.selection)
-                } else if hovering {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous).fill(theme.hover)
-                }
-            }
+            .frame(height: 34)
+            .background { rowBackground }
             .overlay(alignment: .leading) {
-                if isSelected { Capsule().fill(theme.accent).frame(width: 3, height: 16).offset(x: -4) }
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                        .fill(LinearGradient(colors: [theme.accent.opacity(0.7), theme.accent], startPoint: .top, endPoint: .bottom))
+                        .frame(width: 3)
+                        .padding(.vertical, 6)
+                        .shadow(color: theme.accent.opacity(0.7), radius: 5)
+                        .offset(x: -10)
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                }
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .animation(.easeOut(duration: 0.12), value: hovering)
+        .animation(.easeOut(duration: 0.15), value: hovering)
+        .animation(SidebarState.selection, value: isSelected)
         .help(collapsed ? title : "")
         .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    @ViewBuilder private var rowBackground: some View {
+        if isSelected {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(LinearGradient(colors: [theme.accent.opacity(0.16), theme.accent.opacity(0)],
+                                     startPoint: .leading, endPoint: UnitPoint(x: 0.88, y: 0.5)))
+        } else if hovering {
+            RoundedRectangle(cornerRadius: 8, style: .continuous).fill(theme.hover)
+        }
     }
 }
 
@@ -280,6 +467,7 @@ struct SidebarRow<Icon: View, Trailing: View>: View {
 private struct SidebarTabRow: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
+    @Environment(\.sidebarSnapshot) private var snapshot
     let tab: TerminalTab
     let selected: Bool
     @State private var hovering = false
@@ -288,15 +476,25 @@ private struct SidebarTabRow: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "terminal").font(.system(size: 10.5)).foregroundStyle(selected ? theme.accent : theme.faint)
+                .shadow(color: selected ? theme.accent.opacity(0.5) : .clear, radius: 4)
             Text(tab.title).font(.system(size: 12, weight: selected ? .medium : .regular))
                 .foregroundStyle(selected ? Color.primary : theme.muted).lineLimit(1)
             Spacer(minLength: 0)
             TabStatusBadge(id: tab.id, selected: selected)
         }
         .padding(.leading, 40).padding(.trailing, 10)
-        .frame(height: 26)
-        .background(selected ? theme.hover : (hovering ? theme.hover.opacity(0.5) : Color.clear),
-                    in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+        .frame(height: 28)
+        .background {
+            if selected {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(LinearGradient(colors: [theme.accent.opacity(0.13), theme.accent.opacity(0)],
+                                         startPoint: .leading, endPoint: UnitPoint(x: 0.9, y: 0.5)))
+            } else if hovering {
+                RoundedRectangle(cornerRadius: 7, style: .continuous).fill(theme.hover.opacity(0.6))
+            }
+        }
+        .animation(.easeOut(duration: 0.15), value: hovering)
+        .animation(SidebarState.selection, value: selected)
         .overlay(alignment: .top) {
             if dropTarget { Capsule().fill(theme.accent).frame(height: 2).padding(.leading, 36).offset(y: -1) }
         }
@@ -304,12 +502,14 @@ private struct SidebarTabRow: View {
         .onHover { hovering = $0 }
         .onTapGesture { model.select(tab: tab.id) }
         .simultaneousGesture(TapGesture(count: 2).onEnded { model.beginRenameTab(tab) })
-        .onMiddleClick { model.requestCloseTab(tab.id) }
-        .draggable(AppModel.tabPayload(tab.id))
-        .dropDestination(for: String.self) { items, _ in
-            model.handleDrop(items, ontoTab: tab.id)
-        } isTargeted: { dropTarget = $0 }
-        .tabContextMenu(tab)
+        .applying(if: !snapshot) { row in
+            row.onMiddleClick { model.requestCloseTab(tab.id) }
+                .draggable(AppModel.tabPayload(tab.id))
+                .dropDestination(for: String.self) { items, _ in
+                    model.handleDrop(items, ontoTab: tab.id)
+                } isTargeted: { dropTarget = $0 }
+                .tabContextMenu(tab)
+        }
         .accessibilityLabel(tab.title)
         .accessibilityAddTraits(selected ? .isSelected : [])
     }

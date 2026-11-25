@@ -38,13 +38,21 @@ struct FindBar: View {
 /// Spinner while a command runs; red dot when the last command failed in a tab you have not looked at since.
 struct TabStatusBadge: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.sidebarSnapshot) private var snapshot
+    @Environment(\.theme) private var theme
     let id: UUID
     let selected: Bool
 
     var body: some View {
         if model.runningTabs.contains(id) {
-            ProgressView().controlSize(.mini).scaleEffect(0.7).frame(width: 12, height: 12)
-                .accessibilityLabel("Command running")
+            if snapshot {
+                // The image renderer cannot draw a ProgressView: a static ring stands in for it.
+                Circle().trim(from: 0, to: 0.72).stroke(theme.accent, style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+                    .frame(width: 9, height: 9).rotationEffect(.degrees(-90)).frame(width: 12, height: 12)
+            } else {
+                ProgressView().controlSize(.mini).scaleEffect(0.7).frame(width: 12, height: 12)
+                    .accessibilityLabel("Command running")
+            }
         } else if model.failedTabs.contains(id) && !selected {
             Circle().fill(Color.red).frame(width: 7, height: 7).accessibilityLabel("Last command failed")
         }
