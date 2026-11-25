@@ -737,7 +737,7 @@ final class AppModel {
             self.newTab(in: self.state.workspaces[min(1, self.state.workspaces.count - 1)].id); await check("new tab in another workspace")
 
             // The broadcast shortcut (⌥⌘B), fired through the real main menu like a key press would.
-            func pressBroadcastShortcut() {
+            @MainActor func pressBroadcastShortcut() {
                 guard let window = self.activeSession()?.nsView.window,
                       let ev = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [.command, .option],
                                                 timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
