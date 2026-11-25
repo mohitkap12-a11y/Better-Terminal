@@ -1,6 +1,6 @@
 cask "better-terminal" do
-  version "0.1.0"
-  sha256 "REPLACE_WITH_DMG_SHA256"
+  version "0.2.0"
+  sha256 "a432935079234e32f58aa0a8cca2ec6ad2bf16e06653a1adf8188cfad2875f4a"
 
   url "https://github.com/mohitkap12-a11y/Better-Terminal/releases/download/v#{version}/BetterTerminal-#{version}.dmg"
   name "Better Terminal"

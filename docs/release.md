@@ -82,8 +82,10 @@ scripts/make-dmg.sh 0.1.0
 
 ## Homebrew cask
 
-After a stable release, update `version` and `sha256` (from `SHA256SUMS`) in `Casks/better-terminal.rb` and publish
-it in a tap repository (`homebrew-tap`): `brew install --cask <user>/tap/better-terminal`.
+Stable releases bump `Casks/better-terminal.rb` and push it to the tap repo `<owner>/homebrew-better-terminal`.
+One-time setup: create that empty public repo, and add secret `HOMEBREW_TAP_TOKEN` (fine-grained PAT, Contents: read/write on the tap).
+Users then run `brew install --cask <owner>/better-terminal/better-terminal`.
+The copy in this repo's `Casks/` is only the source the release step copies to the tap; do not document it as an install source.
 
 ## Troubleshooting
 
