@@ -75,7 +75,10 @@ struct Sidebar: View {
 
             Spacer(minLength: 0)
             VStack(alignment: .leading, spacing: 3) {
-                SearchField(collapsed: rail) { model.paletteOpen = true }
+                SidebarRow(title: "Search", isSelected: false, collapsed: rail,
+                           action: { model.paletteOpen = true }) {
+                    icon("magnifyingglass", selected: false)
+                } trailing: { shortcut("⌘K") }
                 SidebarRow(title: "Shortcuts", isSelected: false, collapsed: rail,
                            action: { model.shortcutsOpen = true }) {
                     icon("keyboard", selected: false)
@@ -320,42 +323,6 @@ private struct Brand: View {
                 .transition(.opacity.animation(SidebarState.labelFade))
             }
         }
-    }
-}
-
-/// An input-looking search button with the shortcut as a key cap; just the magnifier in the rail.
-private struct SearchField: View {
-    @Environment(\.theme) private var theme
-    let collapsed: Bool
-    let action: () -> Void
-    @State private var hovering = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass").font(.system(size: 13, weight: .medium))
-                if !collapsed {
-                    Text("Search…").font(.system(size: 13)).lineLimit(1)
-                    Spacer(minLength: 4)
-                    Text("⌘K").font(.system(size: 10.5, design: .rounded)).foregroundStyle(theme.muted)
-                        .padding(.horizontal, 6).padding(.vertical, 1)
-                        .background(theme.track, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
-                }
-            }
-            .foregroundStyle(hovering ? Color.primary : theme.muted)
-            .padding(.horizontal, collapsed ? 0 : 12)
-            .frame(maxWidth: .infinity, alignment: collapsed ? .center : .leading)
-            .frame(height: 36)
-            .background(hovering ? theme.hover : theme.card, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(hovering ? Color.primary.opacity(0.18) : theme.border))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(.easeOut(duration: 0.15), value: hovering)
-        .help(collapsed ? "Search (⌘K)" : "")
-        .accessibilityLabel("Search pages and actions")
     }
 }
 
