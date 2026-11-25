@@ -117,11 +117,18 @@ struct CommandPalette: View {
                         }
                         .padding(.vertical, 2)
                         .contentShape(Rectangle())
-                        .listRowBackground(i == selection ? theme.selection : Color.clear)
+                        // Same look as the Shortcuts popup: rounded theme-coloured highlight, no grey list chrome.
+                        .listRowBackground(
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .fill(i == selection ? theme.selection : Color.clear)
+                                .padding(.horizontal, 6).padding(.vertical, 1))
+                        .listRowSeparator(.hidden)
                         .onTapGesture { run(i) }
                         .id(i)
                     }
                     .listStyle(.plain)
+                    .scrollContentBackground(.hidden)          // the system list background was the grey
+                    .background(Color.clear)
                     .onChange(of: selection) { proxy.scrollTo(selection) }
                 }
             }

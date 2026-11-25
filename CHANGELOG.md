@@ -4,6 +4,9 @@ All notable changes. Release notes shown in the update window live in `docs/rele
 
 ## [Unreleased]
 ### Fixed
+- The search palette (⌘K) now takes its colours from the theme like the Shortcuts popup: the grey list background and separator lines are gone, and the selected row has the same rounded theme-coloured highlight.
+
+### Fixed
 - Reaching the pin button of a collapsed sidebar no longer makes the sidebar open (and the button jump away) or close under the pointer: the rail does not open while the pointer is on or next to the button, and an open sidebar treats the button as part of itself, closing 300 ms after the pointer has left both.
 
 ### Changed
