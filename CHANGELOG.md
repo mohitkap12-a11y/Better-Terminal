@@ -5,8 +5,6 @@ All notable changes. Release notes shown in the update window live in `docs/rele
 ## [Unreleased]
 ### Changed
 - The broadcast shortcut is now ⌥⌘B (it was ⌥⌘I; on a US keyboard Option+I is a dead key and did not fire reliably as a menu shortcut).
-
-### Changed
 - Tabs in the top tab bar are no longer draggable: dragging one also moved the whole window. Reorder and move tabs by dragging them in the sidebar (unchanged); the chips still accept a tab dropped from the sidebar.
 
 ### Fixed
