@@ -658,9 +658,9 @@ final class AppModel {
             var failed = 0
             var counter = 0
 
-            func allSessions() -> [(UUID, TerminalSession)] { self.sessions.map { ($0.key, $0.value) } }
+            @MainActor func allSessions() -> [(UUID, TerminalSession)] { self.sessions.map { ($0.key, $0.value) } }
 
-            func check(_ name: String) async {
+            @MainActor func check(_ name: String) async {
                 try? await Task.sleep(for: .milliseconds(900))        // let focus reconciliation settle
                 guard let active = self.activeSession(), let window = active.nsView.window else {
                     lines.append("FAIL \(name): no active terminal or window"); failed += 1; return
