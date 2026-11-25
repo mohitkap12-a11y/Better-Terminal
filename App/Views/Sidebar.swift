@@ -37,6 +37,8 @@ struct Sidebar: View {
     /// The rail temporarily opens while the pointer is over it (so you can switch tabs), and closes when it leaves.
     @State private var peeking = false
     @State private var peekTask: Task<Void, Never>?
+    /// The pointer is in the rail right next to the pin button: do not open (the button would jump away from it).
+    @State private var nearToggle = false
     /// What is drawn: the rail, unless the sidebar is expanded or being peeked at.
     private var rail: Bool { collapsed && !peeking }
 
@@ -102,6 +104,7 @@ struct Sidebar: View {
         .overlay(alignment: .trailing) { Rectangle().fill(theme.border).frame(width: 1) }
         .shadow(color: .black.opacity(peeking ? 0.28 : 0), radius: 18, x: 6)         // floats above the terminals while peeking
         .onHover { inside in setPeek(inside) }
+        .onContinuousHover { phase in trackPointer(phase) }
         .onChange(of: collapsed) { if !collapsed { peekTask?.cancel(); peeking = false } }
         .overlay(alignment: .topTrailing) {
             SidebarToggle(collapsed: $collapsed, onHover: { toggleHover($0) }).offset(x: 11, y: 56)
@@ -129,6 +132,7 @@ struct Sidebar: View {
         peekTask = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(inside ? 140 : 300))
             if Task.isCancelled { return }
+            if inside && nearToggle { return }          // on the way to the pin button: stay a rail
             withAnimation(SidebarState.animation) { peeking = inside }
         }
     }
@@ -138,9 +142,23 @@ struct Sidebar: View {
     /// and it closes only after the pointer has left both. It never opens the sidebar by itself.
     private func toggleHover(_ onButton: Bool) {
         if onButton {
-            if peeking { peekTask?.cancel() }
-        } else {
+            peekTask?.cancel()        // no opening (rail) and no closing (open) while the pointer is on the button
+        } else if peeking {
             setPeek(false)
+        }
+    }
+
+    /// Watches where the pointer is inside the rail. Next to the pin button the rail does not open, so the button
+    /// stays where it is and can be clicked; moving away from that spot opens it as usual.
+    private func trackPointer(_ phase: HoverPhase) {
+        switch phase {
+        case .active(let p):
+            let near = collapsed && !peeking && p.x >= SidebarState.collapsedWidth - 28 && (36...108).contains(p.y)
+            guard near != nearToggle else { return }
+            nearToggle = near
+            if near { peekTask?.cancel() } else { setPeek(true) }
+        case .ended:
+            nearToggle = false
         }
     }
 

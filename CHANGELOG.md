@@ -4,7 +4,7 @@ All notable changes. Release notes shown in the update window live in `docs/rele
 
 ## [Unreleased]
 ### Fixed
-- Reaching the pin button on a collapsed sidebar that opened on hover no longer closes it under the pointer: the button counts as part of the open sidebar, and the sidebar closes 300 ms after the pointer has left both.
+- Reaching the pin button of a collapsed sidebar no longer makes the sidebar open (and the button jump away) or close under the pointer: the rail does not open while the pointer is on or next to the button, and an open sidebar treats the button as part of itself, closing 300 ms after the pointer has left both.
 
 ### Changed
 - The search palette's Actions tab no longer shows recent commands at the top; they are on the Commands tab (press →).
