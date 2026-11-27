@@ -4,6 +4,7 @@ All notable changes. Release notes shown in the update window live in `docs/rele
 
 ## [Unreleased]
 ### Added
+- **Saved commands.** Keep the commands you use often and run them in whichever terminal is focused. Save one with the star in a tab's history (⇧⌘H, or ⌘S there), or with ⌘S in ⌘K ▸ Commands. Use them from the new **Saved** tab in ⌘K (→ past Commands): ⏎ puts the command at the prompt, ⌘⏎ runs it, ⌘S removes it. Give them names, reorder, edit or add them in Settings ▸ Saved commands.
 - MIT license (`LICENSE`) and a list of third-party components (`THIRD_PARTY_NOTICES.md`); the app's copyright line, README and website say so.
 
 ## [0.2.0] - 2026-11-25

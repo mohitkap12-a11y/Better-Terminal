@@ -6,13 +6,17 @@ private struct PaletteItem: Identifiable {
     let title: String
     var subtitle: String = ""
     let symbol: String
+    /// The shell command this row stands for (Commands and Saved tabs), so ⌘S can save or unsave it.
+    var command: String? = nil
+    var saved = false
     let action: () -> Void
 }
 
-private enum PaletteTab: String, CaseIterable { case actions = "Actions", commands = "Commands" }
+private enum PaletteTab: String, CaseIterable { case actions = "Actions", commands = "Commands", saved = "Saved" }
 
-/// ⌘K. Actions tab: your last three commands, then actions, workspaces, layouts and themes.
-/// Commands tab (press →): the last 30 commands from every terminal, searchable. ← goes back.
+/// ⌘K. Actions tab: actions, workspaces, layouts and themes.
+/// Commands tab (→): the last 30 commands from every terminal, searchable. ⌘S saves the highlighted one.
+/// Saved tab (→ again): commands you saved; they go to the focused terminal. ← goes back a tab.
 struct CommandPalette: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
@@ -27,7 +31,8 @@ struct CommandPalette: View {
     private func commandItem(_ h: AppModel.HistoryHit, subtitlePrefix: String = "") -> PaletteItem {
         PaletteItem(title: h.entry.command,
                     subtitle: subtitlePrefix + "\(h.workspace) › \(h.tab.title)",
-                    symbol: h.entry.failed ? "exclamationmark.circle" : "clock") {
+                    symbol: h.entry.failed ? "exclamationmark.circle" : "clock",
+                    command: h.entry.command, saved: model.isSaved(h.entry.command)) {
             dismiss(); model.use(h, run: NSEvent.modifierFlags.contains(.command))
         }
     }
@@ -35,6 +40,14 @@ struct CommandPalette: View {
     private var items: [PaletteItem] {
         let q = query.trimmingCharacters(in: .whitespaces)
         if tab == .commands { return hits.map { commandItem($0) } }
+        if tab == .saved {
+            return model.state.searchSavedCommands(q).map { c in
+                PaletteItem(title: c.title, subtitle: c.hasName ? c.command : "", symbol: "star.fill",
+                            command: c.command, saved: true) {
+                    dismiss(); model.use(c, run: NSEvent.modifierFlags.contains(.command))
+                }
+            }
+        }
 
         var all: [PaletteItem] = []
         func add(_ t: String, _ sub: String = "", _ sym: String, _ a: @escaping () -> Void) {
@@ -72,8 +85,7 @@ struct CommandPalette: View {
         VStack(spacing: 0) {
             HStack(spacing: Metrics.s2) {
                 Image(systemName: "command").foregroundStyle(theme.muted)
-                TextField(tab == .actions ? "Type an action, or press → for your recent commands" : "Search commands from all terminals",
-                          text: $query)
+                TextField(placeholder, text: $query)
                     .textFieldStyle(.plain).font(.title3).focused($focused)
                     .onSubmit { if !NSEvent.modifierFlags.contains(.command) { run(selection) } }
                     .onChange(of: query) { selection = 0 }
@@ -81,8 +93,8 @@ struct CommandPalette: View {
                     .task(id: "\(tab.rawValue)|\(query)") { await reload() }
                     .onKeyPress(.downArrow) { move(1); return .handled }
                     .onKeyPress(.upArrow) { move(-1); return .handled }
-                    .onKeyPress(.rightArrow) { tab = .commands; return .handled }
-                    .onKeyPress(.leftArrow) { tab = .actions; return .handled }
+                    .onKeyPress(.rightArrow) { switchTab(1); return .handled }
+                    .onKeyPress(.leftArrow) { switchTab(-1); return .handled }
                     .onKeyPress(.escape) { dismiss(); return .handled }
             }
             .padding(Metrics.s4)
@@ -97,23 +109,27 @@ struct CommandPalette: View {
                     .buttonStyle(.plain)
                 }
                 Spacer()
-                Text(tab == .actions ? "→ commands" : "← actions").font(.caption).foregroundStyle(theme.faint)
+                Text("← → switch tabs").font(.caption).foregroundStyle(theme.faint)
             }
             .padding(.horizontal, Metrics.s4).padding(.bottom, Metrics.s2)
             Divider()
             if items.isEmpty {
-                ContentUnavailableView(tab == .commands ? "No commands yet" : "No matches",
-                                       systemImage: tab == .commands ? "clock" : "magnifyingglass")
-                    .frame(maxHeight: .infinity)
+                emptyState.frame(maxHeight: .infinity)
             } else {
                 ScrollViewReader { proxy in
                     List(Array(items.enumerated()), id: \.element.id) { i, item in
                         HStack(spacing: Metrics.s3) {
                             Image(systemName: item.symbol).frame(width: 20).foregroundStyle(theme.muted)
                             Text(item.title).lineLimit(1).truncationMode(.middle)
-                                .font(tab == .commands ? .system(.body, design: .monospaced) : .body)
+                                .font(tab == .actions ? .body : .system(.body, design: .monospaced))
                             Spacer()
-                            Text(item.subtitle).font(.caption).foregroundStyle(theme.faint).lineLimit(1)
+                            Text(item.subtitle).lineLimit(1).truncationMode(.middle)
+                                .font(tab == .saved ? .system(.caption, design: .monospaced) : .caption)
+                                .foregroundStyle(theme.faint)
+                            if tab == .commands && item.saved {
+                                Image(systemName: "star.fill").font(.caption).foregroundStyle(theme.muted)
+                                    .accessibilityLabel("Saved")
+                            }
                         }
                         .padding(.vertical, 2)
                         .contentShape(Rectangle())
@@ -132,9 +148,10 @@ struct CommandPalette: View {
                     .onChange(of: selection) { proxy.scrollTo(selection) }
                 }
             }
-            if tab == .commands {
+            if tab != .actions {
                 Divider()
-                Text("⏎ puts the command at that tab's prompt · ⌘⏎ runs it")
+                Text(tab == .commands ? "⏎ puts the command at that tab's prompt · ⌘⏎ runs it · ⌘S saves it"
+                                      : "⏎ puts it at the focused terminal's prompt · ⌘⏎ runs it · ⌘S removes it")
                     .font(.caption).foregroundStyle(theme.faint).padding(.vertical, 6)
             }
         }
@@ -144,8 +161,48 @@ struct CommandPalette: View {
             Button("") { run(selection) }
                 .keyboardShortcut(.return, modifiers: .command)
                 .opacity(0).frame(width: 0, height: 0).accessibilityHidden(true)
+            // ⌘S saves (Commands) or removes (Saved) the highlighted command.
+            Button("") { toggleSaved(selection) }
+                .keyboardShortcut("s", modifiers: .command)
+                .opacity(0).frame(width: 0, height: 0).accessibilityHidden(true)
         }
         .onAppear { focused = true }
+    }
+
+    private var placeholder: String {
+        switch tab {
+        case .actions: "Type an action, or press → for your recent and saved commands"
+        case .commands: "Search commands from all terminals"
+        case .saved: "Search saved commands"
+        }
+    }
+
+    @ViewBuilder private var emptyState: some View {
+        switch tab {
+        case .actions: ContentUnavailableView("No matches", systemImage: "magnifyingglass")
+        case .commands: ContentUnavailableView("No commands yet", systemImage: "clock")
+        case .saved:
+            if query.trimmingCharacters(in: .whitespaces).isEmpty {
+                ContentUnavailableView("No saved commands", systemImage: "star",
+                                       description: Text("Press ⌘S on a command in the Commands tab, or star one in a tab's history."))
+            } else {
+                ContentUnavailableView("No matches", systemImage: "magnifyingglass")
+            }
+        }
+    }
+
+    /// → goes to the next tab, ← to the previous one (no wrap-around).
+    private func switchTab(_ delta: Int) {
+        let all = PaletteTab.allCases
+        guard let i = all.firstIndex(of: tab) else { return }
+        tab = all[min(max(i + delta, 0), all.count - 1)]
+    }
+
+    private func toggleSaved(_ i: Int) {
+        let list = items
+        guard list.indices.contains(i), let cmd = list[i].command else { return }
+        model.toggleSaved(cmd)
+        if tab == .saved { selection = min(selection, max(items.count - 1, 0)) }
     }
 
     /// Up from the first row goes to the last, down from the last goes to the first.

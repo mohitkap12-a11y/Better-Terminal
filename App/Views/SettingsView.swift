@@ -11,6 +11,7 @@ struct SettingsPage: View {
                     AppearanceSection()
                     TerminalSection()
                     TemplatesSection()
+                    SavedCommandsSection()
                     UpdatesSection()
                     DataSection()
                     SupportSection()
@@ -249,6 +250,80 @@ private struct TemplateEditor: View {
             }
         }
         .padding(20).frame(width: 640)
+    }
+}
+
+private struct SavedCommandsSection: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.theme) private var theme
+    @State private var editing: SavedCommand?
+
+    var body: some View {
+        let saved = model.state.savedCommands
+        SettingsSection(title: "Saved commands", subtitle: "Commands you use often. Open them from ⌘K ▸ Saved in any terminal") {
+            if saved.isEmpty {
+                Text("No saved commands yet. Star a command in a tab's history (⇧⌘H), press ⌘S on one in ⌘K ▸ Commands, or add one here.")
+                    .font(.system(size: 12.5)).foregroundStyle(theme.muted).fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 10)
+            }
+            ForEach(Array(saved.enumerated()), id: \.element.id) { i, c in
+                SettingsRow(title: c.title, subtitle: c.hasName ? c.command : "") {
+                    HStack(spacing: 8) {
+                        Button { model.state.moveSavedCommand(c.id, by: -1) } label: { Image(systemName: "chevron.up") }
+                            .buttonStyle(.borderless).disabled(i == 0).accessibilityLabel("Move up")
+                        Button { model.state.moveSavedCommand(c.id, by: 1) } label: { Image(systemName: "chevron.down") }
+                            .buttonStyle(.borderless).disabled(i == saved.count - 1).accessibilityLabel("Move down")
+                        PillButton(title: "Edit") { editing = c }
+                        PillButton(title: "Delete") { model.state.removeSavedCommand(c.id) }
+                    }
+                }
+            }
+            SettingsRow(title: "Add a command", subtitle: "With an optional name, such as “Deploy staging”.", showsDivider: false) {
+                PillButton(title: "Add Command") { editing = SavedCommand(command: "") }
+            }
+        }
+        .sheet(item: $editing) { c in SavedCommandEditor(saved: c) }
+    }
+}
+
+private struct SavedCommandEditor: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @State var saved: SavedCommand
+
+    private var trimmed: String { saved.command.trimmingCharacters(in: .whitespacesAndNewlines) }
+    /// Another saved entry already has this command.
+    private var duplicate: Bool { model.state.savedCommands.contains { $0.id != saved.id && $0.command == trimmed } }
+    private var isNew: Bool { !model.state.savedCommands.contains { $0.id == saved.id } }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(isNew ? "Add saved command" : "Edit saved command").font(.headline)
+            TextField("Name (optional)", text: $saved.name)
+            TextField("Command", text: $saved.command, axis: .vertical)
+                .font(.system(.body, design: .monospaced)).lineLimit(1...6)
+            if duplicate {
+                Text("This command is already saved.").font(.caption).foregroundStyle(.red)
+            }
+            HStack {
+                Spacer()
+                Button("Cancel") { dismiss() }
+                Button("Save") {
+                    var s = saved
+                    s.command = trimmed
+                    s.name = s.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if let i = model.state.savedCommands.firstIndex(where: { $0.id == s.id }) {
+                        model.state.savedCommands[i] = s
+                    } else {
+                        model.state.savedCommands.append(s)
+                    }
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(trimmed.isEmpty || duplicate)
+            }
+        }
+        .padding(20).frame(width: 520)
     }
 }
 

@@ -155,6 +155,24 @@ extension WorkspaceTemplate {
     }
 }
 
+/// A command the user keeps for reuse. Global: not tied to a tab, it runs in whichever terminal is focused.
+public struct SavedCommand: Codable, Hashable, Sendable, Identifiable {
+    public var id: UUID
+    public var command: String
+    /// Optional label shown instead of the command (e.g. "Deploy staging"). Empty means none.
+    public var name: String
+    public var createdAt: Date
+    public init(id: UUID = UUID(), command: String, name: String = "", createdAt: Date = Date()) {
+        self.id = id; self.command = command; self.name = name; self.createdAt = createdAt
+    }
+    /// What lists show as the main text: the name when set, otherwise the command.
+    public var title: String {
+        let n = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return n.isEmpty ? command : n
+    }
+    public var hasName: Bool { !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+}
+
 public enum ThemeMode: String, Codable, Sendable, CaseIterable { case system, light, dark }
 
 public struct AppState: Codable, Sendable {
@@ -173,6 +191,8 @@ public struct AppState: Codable, Sendable {
     public var terminalFontFamily: String = ""
     public var templates: [WorkspaceTemplate] = []
     public var customThemes: [CustomTheme] = []
+    /// Frequently used commands the user saved (⌘K ▸ Saved). In the user's order.
+    public var savedCommands: [SavedCommand] = []
     /// Global hotkey (⌃`) that pops up a small terminal in the bottom-right corner.
     public var quickTerminalEnabled: Bool = false
     /// Which key opens the quick terminal (see `QuickHotkey` in the app).
@@ -200,6 +220,7 @@ public struct AppState: Codable, Sendable {
         terminalFontFamily = try c.decodeIfPresent(String.self, forKey: .terminalFontFamily) ?? ""
         templates = try c.decodeIfPresent([WorkspaceTemplate].self, forKey: .templates) ?? []
         customThemes = try c.decodeIfPresent([CustomTheme].self, forKey: .customThemes) ?? []
+        savedCommands = try c.decodeIfPresent([SavedCommand].self, forKey: .savedCommands) ?? []
         quickTerminalEnabled = try c.decodeIfPresent(Bool.self, forKey: .quickTerminalEnabled) ?? false
         quickTerminalHotkey = try c.decodeIfPresent(String.self, forKey: .quickTerminalHotkey) ?? "ctrlGrave"
         rightClickCopies = try c.decodeIfPresent(Bool.self, forKey: .rightClickCopies) ?? false
@@ -209,6 +230,57 @@ public struct AppState: Codable, Sendable {
         var ws = Workspace(name: "Main")
         ws.addTab()
         return AppState(workspaces: [ws])
+    }
+}
+
+// MARK: Saved commands
+
+extension AppState {
+    private static func normalized(_ command: String) -> String {
+        command.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// The saved entry for this command text, if any (surrounding whitespace ignored).
+    public func savedCommand(for command: String) -> SavedCommand? {
+        let c = Self.normalized(command)
+        return savedCommands.first { Self.normalized($0.command) == c }
+    }
+
+    public func isSaved(_ command: String) -> Bool { savedCommand(for: command) != nil }
+
+    /// Saves a command. Empty commands and duplicates are ignored. Returns whether it was added.
+    @discardableResult
+    public mutating func saveCommand(_ command: String, name: String = "") -> Bool {
+        let c = Self.normalized(command)
+        guard !c.isEmpty, !isSaved(c) else { return false }
+        savedCommands.append(SavedCommand(command: c, name: name.trimmingCharacters(in: .whitespacesAndNewlines)))
+        return true
+    }
+
+    /// Saves the command if it is not saved yet, otherwise removes it. Returns whether it is saved afterwards.
+    @discardableResult
+    public mutating func toggleSaved(_ command: String) -> Bool {
+        if let s = savedCommand(for: command) { removeSavedCommand(s.id); return false }
+        return saveCommand(command)
+    }
+
+    public mutating func removeSavedCommand(_ id: UUID) { savedCommands.removeAll { $0.id == id } }
+
+    /// Moves a saved command up (negative) or down (positive), clamped to the list.
+    public mutating func moveSavedCommand(_ id: UUID, by delta: Int) {
+        guard let i = savedCommands.firstIndex(where: { $0.id == id }) else { return }
+        let j = min(max(i + delta, 0), savedCommands.count - 1)
+        guard i != j else { return }
+        savedCommands.insert(savedCommands.remove(at: i), at: j)
+    }
+
+    /// Saved commands whose name or command contains `query` (case-insensitive). Empty query returns all.
+    public func searchSavedCommands(_ query: String) -> [SavedCommand] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return savedCommands }
+        return savedCommands.filter {
+            $0.command.localizedCaseInsensitiveContains(q) || $0.name.localizedCaseInsensitiveContains(q)
+        }
     }
 }
 

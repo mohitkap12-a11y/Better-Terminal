@@ -42,7 +42,7 @@
 - **History for every tab.** Click the clock (or `⇧⌘H`), type to search, `↑↓` to move, `⏎` to insert, `⌘⏎` to run. Right-click a command to copy it or run it again.
 - **Move between panes.** `⌘` + arrow keys jump to the neighbouring terminal; the pane you land on pulses.
 - **Resume on relaunch.** Quit and reopen: workspaces, tabs, layouts, folders, history and the text on screen come back. A fresh shell starts below it (running programs can't be revived). Switch it off in Settings if you handle secrets.
-- **Command palette.** `⌘K` for actions. Press `→` for the last 30 commands from every terminal, searchable.
+- **Command palette.** `⌘K` for actions. Press `→` for the last 30 commands from every terminal, searchable, and `→` again for your saved commands, which run in whichever terminal has focus.
 - **Find in terminal.** `⌘F` with highlighted matches; `⌘G` / `⇧⌘G` to step through them.
 - **Tab status and notifications.** A spinner while a command runs, a red dot when one failed, and a notification when a long command finishes in another tab.
 - **Broadcast input.** `⌥⌘B` repeats your typing in every pane of the workspace.

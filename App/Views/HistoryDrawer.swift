@@ -2,7 +2,7 @@ import SwiftUI
 import BetterTerminalCore
 
 /// Per-tab command history. Fully keyboard driven: type to search, ↑/↓ to move through the results,
-/// ⏎ puts the command at the prompt, ⌘⏎ runs it. Click = put at prompt, double-click = run.
+/// ⏎ puts the command at the prompt, ⌘⏎ runs it, ⌘S saves it (⌘K ▸ Saved). Click = put at prompt, double-click = run.
 struct HistoryDrawer: View {
     @Environment(AppModel.self) private var model
     @Environment(\.theme) private var theme
@@ -48,7 +48,9 @@ struct HistoryDrawer: View {
                     ScrollView {
                         LazyVStack(spacing: 2) {
                             ForEach(Array(shown.enumerated()), id: \.element.id) { index, e in
-                                Row(entry: e, selected: index == selection)
+                                Row(entry: e, selected: index == selection, saved: model.isSaved(e.command)) {
+                                    model.toggleSaved(e.command)
+                                }
                                     .id(e.id)
                                     .contentShape(Rectangle())
                                     .onTapGesture(count: 2) { onPick(e.command, true) }
@@ -56,6 +58,9 @@ struct HistoryDrawer: View {
                                     .contextMenu {
                                         Button("Run again") { onPick(e.command, true) }
                                         Button("Insert at prompt") { onPick(e.command, false) }
+                                        Button(model.isSaved(e.command) ? "Remove from Saved" : "Save Command") {
+                                            model.toggleSaved(e.command)
+                                        }
                                         Divider()
                                         Button("Copy command") { copy(e.command) }
                                         Button("Copy directory") { copy(e.cwd) }
@@ -71,7 +76,7 @@ struct HistoryDrawer: View {
                 }
                 Divider()
                 HStack(spacing: Metrics.s3) {
-                    hint("↑↓", "navigate"); hint("⏎", "insert"); hint("⌘⏎", "run")
+                    hint("↑↓", "navigate"); hint("⏎", "insert"); hint("⌘⏎", "run"); hint("⌘S", "save")
                 }
                 .padding(.horizontal, Metrics.s3).padding(.vertical, 6)
             }
@@ -81,6 +86,9 @@ struct HistoryDrawer: View {
             // ⌘⏎ runs the highlighted command (the text field does not report it as a submit).
             Button("") { pickSelected(runNow: true) }
                 .keyboardShortcut(.return, modifiers: .command)
+                .opacity(0).frame(width: 0, height: 0).accessibilityHidden(true)
+            Button("") { if shown.indices.contains(selection) { model.toggleSaved(shown[selection].command) } }
+                .keyboardShortcut("s", modifiers: .command)
                 .opacity(0).frame(width: 0, height: 0).accessibilityHidden(true)
         }
         .onAppear { searchFocused = true }
@@ -120,6 +128,8 @@ struct HistoryDrawer: View {
         @Environment(\.theme) private var theme
         let entry: HistoryEntry
         let selected: Bool
+        let saved: Bool
+        let onToggleSaved: () -> Void
 
         var body: some View {
             HStack(spacing: Metrics.s2) {
@@ -135,6 +145,13 @@ struct HistoryDrawer: View {
                 if let d = entry.duration {
                     Text(String(format: "%.1fs", d)).font(.caption2).monospacedDigit().foregroundStyle(theme.faint)
                 }
+                Button(action: onToggleSaved) {
+                    Image(systemName: saved ? "star.fill" : "star")
+                        .font(.caption).foregroundStyle(saved ? Color.yellow : theme.faint)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(saved ? "Remove from saved commands" : "Save command")
+                .help(saved ? "Remove from Saved (⌘S)" : "Save command (⌘S)")
             }
             .padding(.horizontal, 8).padding(.vertical, 5)
             .background(selected ? theme.selection : Color.clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))

@@ -25,7 +25,7 @@ A quick tour. Each feature links to its full page.
 
 **[Per-tab history](history-search.html)** records every command with its folder, exit status and duration. Search it, then insert or run a command.
 
-**[Command palette](history-search.html#palette)** (⌘K) has an Actions tab and a Commands tab. Press → for the last 30 commands from every terminal.
+**[Command palette](history-search.html#palette)** (⌘K) has Actions, Commands and Saved tabs. Press → for the last 30 commands from every terminal, and again for the commands you saved (⌘S), which go to the focused terminal.
 
 **[Find in terminal](terminal.html#find)** (⌘F) searches the scrollback with highlighted matches.
 
