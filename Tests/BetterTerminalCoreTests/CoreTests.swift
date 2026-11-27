@@ -490,4 +490,43 @@ final class BatchFeatureTests: XCTestCase {
         XCTAssertNil(CommandOutput.since("short", startLength: 50))
         XCTAssertNil(CommandOutput.since("abc", startLength: 3))
     }
+
+    func testSavedCommands() {
+        var st = AppState.fresh()
+        XCTAssertTrue(st.saveCommand("  git pull --rebase \n"))
+        XCTAssertFalse(st.saveCommand("git pull --rebase"), "duplicates are ignored")
+        XCTAssertFalse(st.saveCommand("   "), "empty commands are ignored")
+        XCTAssertEqual(st.savedCommands.map(\.command), ["git pull --rebase"])
+        XCTAssertTrue(st.isSaved(" git pull --rebase"))
+
+        st.saveCommand("./deploy.sh --env=staging", name: " Deploy staging ")
+        XCTAssertEqual(st.savedCommands[1].name, "Deploy staging")
+        XCTAssertEqual(st.savedCommands[1].title, "Deploy staging")
+        XCTAssertEqual(st.savedCommands[0].title, "git pull --rebase")
+
+        XCTAssertEqual(st.searchSavedCommands("deploy").count, 1)
+        XCTAssertEqual(st.searchSavedCommands("STAGING").count, 1)
+        XCTAssertEqual(st.searchSavedCommands("").count, 2)
+
+        st.moveSavedCommand(st.savedCommands[1].id, by: -1)
+        XCTAssertEqual(st.savedCommands.first?.name, "Deploy staging")
+        st.moveSavedCommand(st.savedCommands[0].id, by: -5)
+        XCTAssertEqual(st.savedCommands.first?.name, "Deploy staging", "clamped at the top")
+
+        XCTAssertFalse(st.toggleSaved("git pull --rebase"))
+        XCTAssertFalse(st.isSaved("git pull --rebase"))
+        XCTAssertTrue(st.toggleSaved("git pull --rebase"))
+        XCTAssertEqual(st.savedCommands.count, 2)
+    }
+
+    func testSavedCommandsDecodeFromOldState() throws {
+        let old = #"{"version":2,"workspaces":[]}"#
+        let st = try JSONDecoder().decode(AppState.self, from: Data(old.utf8))
+        XCTAssertTrue(st.savedCommands.isEmpty)
+
+        var withSaved = AppState()
+        withSaved.saveCommand("ls -la", name: "List")
+        let back = try JSONDecoder().decode(AppState.self, from: JSONEncoder().encode(withSaved))
+        XCTAssertEqual(back.savedCommands, withSaved.savedCommands)
+    }
 }

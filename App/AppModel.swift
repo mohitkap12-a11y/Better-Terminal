@@ -653,6 +653,22 @@ final class AppModel {
         s.focus()
     }
 
+    // MARK: Saved commands
+
+    /// Saves the command, or removes it when it is already saved. Returns whether it is saved afterwards.
+    @discardableResult
+    func toggleSaved(_ command: String) -> Bool { state.toggleSaved(command) }
+
+    func isSaved(_ command: String) -> Bool { state.isSaved(command) }
+
+    /// Saved commands are not tied to a tab: they go to the focused terminal.
+    func use(_ saved: SavedCommand, run: Bool) {
+        guard let s = activeSession() else { return }
+        route = .terminal
+        if run { s.run(saved.command) } else { s.insert(saved.command) }
+        s.focus()
+    }
+
     // MARK: Quick terminal and smoke test
 
     /// A throwaway terminal that is not part of any workspace (the drop-down terminal).

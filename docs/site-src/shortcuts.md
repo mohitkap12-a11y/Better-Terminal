@@ -72,7 +72,7 @@ In the ⌘/ popup, ⏎ closes it and does what the highlighted shortcut does (a 
 | Close tab with middle-click | A mouse gesture. |
 | Move between panes (⌘ and arrow keys) | Four directions. |
 | Swap two panes | A drag. |
-| Palette: Actions ⇄ Commands (← →) | Keys that only work inside the palette. |
+| Palette: Actions ⇄ Commands ⇄ Saved (← →) | Keys that only work inside the palette. |
 | Find next / previous | A pair; use the keys while searching. |
 | Bigger / smaller text | A pair. |
 | Open a link | A click. |
