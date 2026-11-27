@@ -3,9 +3,14 @@
 All notable changes. Release notes shown in the update window live in `docs/release-notes/`.
 
 ## [Unreleased]
+
+## [0.3.0] - 2026-11-28
+Saved commands, an MIT license and Homebrew install. Release notes shown in the update window: [docs/release-notes/v0.3.0.md](docs/release-notes/v0.3.0.md).
+
 ### Added
 - **Saved commands.** Keep the commands you use often and run them in whichever terminal is focused. Save one with the star in a tab's history (⇧⌘H, or ⌘S there), or with ⌘S in ⌘K ▸ Commands. Use them from the new **Saved** tab in ⌘K (→ past Commands): ⏎ puts the command at the prompt, ⌘⏎ runs it, ⌘S removes it. Give them names, reorder, edit or add them in Settings ▸ Saved commands.
 - MIT license (`LICENSE`) and a list of third-party components (`THIRD_PARTY_NOTICES.md`); the app's copyright line, README and website say so.
+- **Homebrew.** `brew install --cask mohitkap12-a11y/better-terminal/better-terminal`; stable releases update the tap automatically.
 
 ## [0.2.0] - 2026-11-25
 Split panes, a quick terminal, find, workspace templates and a redesigned sidebar. Release notes shown in the update window: [docs/release-notes/v0.2.0.md](docs/release-notes/v0.2.0.md).
